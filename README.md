@@ -39,9 +39,26 @@ To update, run `git pull` in the clone. The links pick up the change.
 Use WSL, or clone with `git clone -c core.symlinks=true` from a terminal that is allowed to create
 symlinks.
 
-**In Codex**, link the folders into `~/.codex/skills/` instead. Only `illustrator` carries a
-Codex description file (`agents/openai.yaml`). The others rely on their `SKILL.md`, which Codex
-also reads.
+## Installing in Codex
+
+Codex reads skills from a `.claude/skills/` folder inside the project you are working in. From
+the project's root, link each skill you want from your clone (replace `/path/to/ResearchAgent`
+with where you cloned it):
+
+```sh
+mkdir -p .claude/skills
+ln -s /path/to/ResearchAgent/illustrator .claude/skills/illustrator
+```
+
+Then invoke it by name, for example:
+
+```
+/illustrator Create figures for the salient results in my manuscript.
+```
+
+Only `illustrator` has been tested in Codex, and only it carries a Codex description file
+(`agents/openai.yaml`). The others rely on their `SKILL.md` alone. The same project-level folder
+also works in Claude Code, if you want a skill available in one project only.
 
 ## What each skill needs
 
