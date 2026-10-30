@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- DEMO: replace the title and the two lines of the header below. -->
+<title>Bisection, step by step</title>
+<style>
+:root {
+  --bg: #fbfaf7; --fg: #1d1d1b; --muted: #6b6a65; --card: #ffffff; --line: #e3e1da; --grid: #eeece6;
+  --c1: #2f5fb3; --c2: #d4552a; --c3: #1f8a55; --c4: #8a4fb8; --c5: #b88a00; --mark: #fff1a8;
+  --good: #1f7a3a; --bad: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181a; --fg: #e9e7e1; --muted: #a3a19a; --card: #202226; --line: #34363b; --grid: #2a2c30;
+    --c1: #7aa5f0; --c2: #f08a5d; --c3: #5fc28e; --c4: #c39ae8; --c5: #e3c25a; --mark: #5a4d00;
+    --good: #5fc27e; --bad: #f07167;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181a; --fg: #e9e7e1; --muted: #a3a19a; --card: #202226; --line: #34363b; --grid: #2a2c30;
+  --c1: #7aa5f0; --c2: #f08a5d; --c3: #5fc28e; --c4: #c39ae8; --c5: #e3c25a; --mark: #5a4d00;
+  --good: #5fc27e; --bad: #f07167;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 Georgia, "Times New Roman", serif; }
+main { max-width: 52rem; margin: 0 auto; padding: 1.5rem 16px 4rem; }
+h1 { font-size: 2rem; line-height: 1.2; margin: 0.5rem 0 0.25rem; }
+h2 { font-size: 1.35rem; margin: 2.5rem 0 0.75rem; border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; }
+.sub { color: var(--muted); margin: 0 0 1rem; }
+nav.toc { font: 0.9rem system-ui, sans-serif; background: var(--card); border: 1px solid var(--line); border-radius: 0.5rem; padding: 0.6rem 1rem; }
+nav.toc a { color: inherit; margin-right: 1rem; }
+.callout { background: var(--card); border-left: 4px solid var(--c1); padding: 0.6rem 1rem; margin: 1rem 0; border-radius: 0 0.4rem 0.4rem 0; }
+.callout.warn { border-left-color: var(--c2); }
+code, pre { font: 0.88em ui-monospace, Menlo, monospace; }
+pre { white-space: pre-wrap; background: var(--card); border: 1px solid var(--line); padding: 0.8rem; border-radius: 0.4rem; overflow-x: auto; }
+math { font-size: 1.05em; }
+
+/* the stage: canvas, narration, controls */
+figure.stage { margin: 1rem 0; background: var(--card); border: 1px solid var(--line); border-radius: 0.6rem; padding: 0.8rem; }
+#canvas { width: 100%; height: auto; display: block; }
+#narration { min-height: 6.5em; padding: 0.5rem 0.25rem 0; }
+#narration .step-title { font: 600 0.8rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font: 0.9rem system-ui, sans-serif; padding-top: 0.6rem; border-top: 1px solid var(--line); margin-top: 0.6rem; }
+.controls button { font: inherit; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 0.35rem; padding: 0.3rem 0.7rem; cursor: pointer; min-width: 2.4rem; }
+.controls button:hover { border-color: var(--c1); }
+.controls input[type=range] { flex: 1; min-width: 8rem; accent-color: var(--c1); }
+.controls .count { color: var(--muted); min-width: 4.5rem; text-align: right; }
+/* the legend sits on several short lines rather than one long run */
+.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(12em, 1fr)); gap: 0.15rem 0.9rem; font: 0.82rem system-ui, sans-serif; color: var(--muted); padding: 0.2rem 0.25rem; }
+.parts { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.2rem 0.25rem 0.4rem; font: 0.85rem system-ui, sans-serif; }
+.parts:empty { display: none; }
+body.capture .parts { display: none; } /* video frames: the step title already names the part */
+.parts button.on { outline: 2px solid var(--c2); }
+.legend span::before { content: ""; display: inline-block; width: 1.1em; height: 0.25em; margin-right: 0.35em; vertical-align: middle; background: currentColor; }
+
+/* SVG classes used by the Plot helper */
+svg text { font: 13px system-ui, sans-serif; fill: var(--fg); }
+svg .axis { stroke: var(--muted); stroke-width: 1; }
+svg .grid { stroke: var(--grid); stroke-width: 1; }
+svg .tick { fill: var(--muted); font-size: 11px; }
+svg .c1 { stroke: var(--c1); fill: var(--c1); } svg .c2 { stroke: var(--c2); fill: var(--c2); }
+svg .c3 { stroke: var(--c3); fill: var(--c3); } svg .c4 { stroke: var(--c4); fill: var(--c4); }
+svg .c5 { stroke: var(--c5); fill: var(--c5); } svg .muted { stroke: var(--muted); fill: var(--muted); }
+svg path.c1, svg path.c2, svg path.c3, svg path.c4, svg path.c5, svg path.muted,
+svg line.c1, svg line.c2, svg line.c3, svg line.c4, svg line.c5, svg line.muted { fill: none; stroke-width: 2.2; }
+svg .thin { stroke-width: 1.2 !important; } svg .dashed { stroke-dasharray: 5 4; } svg .faint { opacity: 0.35; }
+svg path.area { stroke: none !important; opacity: 0.16; }
+svg path.area.c1 { fill: var(--c1); } svg path.area.c2 { fill: var(--c2); } svg path.area.c3 { fill: var(--c3); }
+svg path.area.c4 { fill: var(--c4); } svg path.area.c5 { fill: var(--c5); } svg path.area.muted { fill: var(--muted); }
+svg text.c1, svg text.c2, svg text.c3, svg text.c4, svg text.c5, svg text.muted { stroke: none; }
+svg circle { stroke-width: 0; }
+
+/* quiz */
+.quiz .q { background: var(--card); border: 1px solid var(--line); border-radius: 0.5rem; padding: 0.8rem 1rem; margin: 0.8rem 0; }
+.quiz .q p { margin: 0 0 0.5rem; font-weight: 600; }
+.quiz button { display: block; width: 100%; text-align: left; font: 0.95rem system-ui, sans-serif; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 0.35rem; padding: 0.45rem 0.7rem; margin: 0.3rem 0; cursor: pointer; }
+.quiz button.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, var(--bg)); }
+.quiz button.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--bg)); }
+.quiz .feedback { font: 0.92rem system-ui, sans-serif; color: var(--muted); margin-top: 0.4rem; }
+
+/* presentation mode: the stage alone, filling the screen */
+body.present main > :not(#walkthrough-section) { display: none; }
+body.present #walkthrough-section > :not(figure.stage) { display: none; }
+body.present main { max-width: none; padding: 1vh 2vw; }
+body.present figure.stage { border: none; margin: 0; height: 97vh; display: grid; grid-template-rows: 1fr auto auto auto; }
+body.present #canvas { height: 100%; min-height: 0; }
+body.present #narration { font-size: 1.45rem; min-height: 4.6em; }
+body.present .legend { font-size: 1rem; }
+body.capture .controls { display: none; }
+.hint { font: 0.8rem system-ui, sans-serif; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<!-- DEMO: title, and one line saying which manuscript and section uses the method. -->
+<h1>Bisection, step by step</h1>
+<p class="sub">A template demonstration: finding the root of <math><msup><mi>x</mi><mn>2</mn></msup><mo>−</mo><mn>2</mn></math> on [1, 2].</p>
+<nav class="toc"><a href="#method">The method</a><a href="#example">The example</a><a href="#walkthrough-section">Step by step</a><a href="#paper">In the paper</a><a href="#pitfalls">What can go wrong</a><a href="#quiz">Check yourself</a></nav>
+
+<!-- DEMO: the sections below are the fixed outline. Fill each; keep the ids. -->
+<section id="method"><h2>The method</h2>
+<p>Template text: what the method computes, in two or three plain sentences, and the one idea that makes it work.</p>
+</section>
+
+<section id="example"><h2>The example</h2>
+<p>Template text: the smallest example that shows every move of the method, and why nothing smaller would.</p>
+</section>
+
+<section id="walkthrough-section"><h2>Step by step</h2>
+<p class="hint">Use ◀ ▶ or the arrow keys; Space plays; F toggles presentation mode. To show only the
+demonstration in a talk, open this page with <code>?present=1</code> (add <code>&amp;autoplay=1</code> to run it on its own).</p>
+<figure class="stage">
+  <div class="parts" id="parts"></div>
+  <svg id="canvas" viewBox="0 0 800 480" role="img" aria-label="Animated demonstration"></svg>
+  <div class="legend" id="legend"></div>
+  <div id="narration" aria-live="polite"></div>
+  <div class="controls">
+    <button id="first" title="First step">⏮</button><button id="prev" title="Previous step (←)">◀</button>
+    <button id="play" title="Play / pause (Space)">▶︎ Play</button><button id="next" title="Next step (→)">▶</button>
+    <button id="last" title="Last step">⏭</button>
+    <input type="range" id="slider" min="0" value="0" aria-label="Step">
+    <span class="count" id="count"></span>
+    <button id="present" title="Presentation mode (F)">⛶</button>
+  </div>
+</figure>
+</section>
+
+<section id="paper"><h2>In the paper</h2>
+<p>Template text: where and how the manuscript uses the method, quoting the paper.</p>
+</section>
+
+<section id="pitfalls"><h2>What can go wrong</h2>
+<p>Template text: the failure modes that matter for this use, shown on the example where possible.</p>
+</section>
+
+<section id="quiz"><h2>Check yourself</h2><div class="quiz" id="quiz-box"></div></section>
+</main>
+
+<!-- DEMO: the trace written by the compute script. Every number on the page comes from here. -->
+<script type="application/json" id="trace">
+{"title": "bisection", "stepMs": 2200,
+ "legend": [["c1", "f(x) = x² − 2"], ["c2", "current interval"], ["c3", "midpoint"]],
+ "steps": [
+  {"title": "Start", "narration": "The root lies in [1, 2] because f(1) = −1 &lt; 0 &lt; f(2) = 2.", "a": 1, "b": 2},
+  {"title": "Iteration 1", "narration": "The midpoint 1.5 has f(1.5) = 0.25 &gt; 0, so the root is in [1, 1.5].", "a": 1, "b": 2, "m": 1.5},
+  {"title": "Iteration 2", "narration": "The midpoint 1.25 has f(1.25) = −0.4375 &lt; 0, so the root is in [1.25, 1.5].", "a": 1, "b": 1.5, "m": 1.25}
+ ]}
+</script>
+
+<!-- DEMO: quiz questions; "answer" is the index of the right option. -->
+<script type="application/json" id="quiz-data">
+[{"q": "Why does bisection keep the half where f changes sign?", "options": ["Because f is increasing", "Because a continuous f that changes sign has a root in between", "Because the midpoint is always closer to the root"], "answer": 1, "explain": "The intermediate value theorem guarantees a root in any interval where a continuous function changes sign."}]
+</script>
+
+<script>
+/* ---------- Plot: a small SVG helper shared by every demonstration ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+class Plot {
+  /* x, y: [min, max] data ranges; box: [left, top, width, height] in viewBox units */
+  constructor(svg, x, y, box = [60, 20, 720, 420]) {
+    Object.assign(this, { svg, x, y, box });
+    this.g = el("g", {}, svg);
+  }
+  sx(v) { const [l, , w] = this.box; return l + (v - this.x[0]) / (this.x[1] - this.x[0]) * w; }
+  sy(v) { const [, t, , h] = this.box; return t + h - (v - this.y[0]) / (this.y[1] - this.y[0]) * h; }
+  axes(xticks = [], yticks = [], fmt = v => String(v)) {
+    const [l, t, w, h] = this.box;
+    for (const v of xticks) { el("line", { x1: this.sx(v), x2: this.sx(v), y1: t, y2: t + h, class: "grid" }, this.g);
+      el("text", { x: this.sx(v), y: t + h + 16, "text-anchor": "middle", class: "tick" }, this.g).textContent = fmt(v); }
+    for (const v of yticks) { el("line", { x1: l, x2: l + w, y1: this.sy(v), y2: this.sy(v), class: "grid" }, this.g);
+      el("text", { x: l - 6, y: this.sy(v) + 4, "text-anchor": "end", class: "tick" }, this.g).textContent = fmt(v); }
+    el("rect", { x: l, y: t, width: w, height: h, fill: "none", class: "axis" }, this.g);
+    return this;
+  }
+  clip() { /* clip drawings to the plot box */
+    const id = "clip" + Math.random().toString(36).slice(2);
+    const cp = el("clipPath", { id }, el("defs", {}, this.svg));
+    el("rect", { x: this.box[0], y: this.box[1], width: this.box[2], height: this.box[3] }, cp);
+    this.g = el("g", { "clip-path": `url(#${id})` }, this.svg);
+    return this;
+  }
+  path(pts, cls) { return el("path", { d: pts.map((p, i) => (i ? "L" : "M") + this.sx(p[0]).toFixed(2) + "," + this.sy(p[1]).toFixed(2)).join(""), class: cls }, this.g); }
+  area(pts, cls) { const e = this.path(pts, cls + " area"); e.setAttribute("d", e.getAttribute("d") + "Z"); return e; }
+  line(x1, y1, x2, y2, cls) { return el("line", { x1: this.sx(x1), y1: this.sy(y1), x2: this.sx(x2), y2: this.sy(y2), class: cls }, this.g); }
+  dot(x, y, cls, r = 5) { return el("circle", { cx: this.sx(x), cy: this.sy(y), r, class: cls }, this.g); }
+  label(x, y, text, cls = "", dx = 6, dy = -6, anchor = "start") {
+    const e = el("text", { x: this.sx(x) + dx, y: this.sy(y) + dy, class: cls, "text-anchor": anchor }, this.g);
+    e.textContent = text; return e;
+  }
+  fn(f, cls, n = 400) { const pts = []; for (let i = 0; i <= n; i++) { const x = this.x[0] + (this.x[1] - this.x[0]) * i / n; pts.push([x, f(x)]); } return this.path(pts, cls); }
+}
+
+/* ---------- DEMO: draw one step. Everything drawn comes from TRACE. ---------- */
+function drawStep(svg, trace, k) {
+  const s = trace.steps[k];
+  const p = new Plot(svg, [0.9, 2.1], [-1.4, 2.4]).axes([1, 1.25, 1.5, 1.75, 2], [-1, 0, 1, 2]).clip();
+  p.line(0.9, 0, 2.1, 0, "muted thin");
+  p.fn(x => x * x - 2, "c1");
+  p.area([[s.a, -1.4], [s.b, -1.4], [s.b, 2.4], [s.a, 2.4]], "c2");
+  if (s.m !== undefined) { p.line(s.m, -1.4, s.m, 2.4, "c3 dashed"); p.dot(s.m, s.m * s.m - 2, "c3"); }
+}
+
+/* ---------- the player: no changes needed per demonstration ---------- */
+const TRACE = JSON.parse(document.getElementById("trace").textContent);
+const N = TRACE.steps.length;
+const svg = document.getElementById("canvas");
+const slider = document.getElementById("slider");
+let k = 0, timer = null;
+slider.max = N - 1;
+/* Parts: {"parts": [{"title": "Part 2 · where NJ goes wrong", "step": 9}, ...]} gives one button
+   per part, so a later part (a failure case, say) is one click or ?part=2 away. */
+const PARTS = TRACE.parts || [];
+document.getElementById("parts").innerHTML = PARTS.map((p, j) => `<button data-part="${j}">${p.title}</button>`).join("");
+document.querySelectorAll("#parts button").forEach(b => b.onclick = () => show(PARTS[+b.dataset.part].step));
+const partOf = i => PARTS.reduce((cur, p, j) => (i >= p.step ? j : cur), -1);
+/* A step may carry its own "legend" (e.g. a second part with different objects); else the trace's. */
+function drawLegend(entries) {
+  document.getElementById("legend").innerHTML = (entries || []).map(([c, t]) => `<span style="color:var(--${c})">${t}</span>`).join("");
+}
+/* Numbers for labels: 4 significant figures, and scientific notation when a value is tiny or huge,
+   so a gap shrinking towards zero never shows as 0.00. */
+function num(x, sig = 4) {
+  if (!isFinite(x)) return String(x);
+  if (x === 0) return "0";
+  const a = Math.abs(x);
+  if (a < 1e-3 || a >= 1e5) {
+    const [m, e] = x.toExponential(sig - 1).split("e");
+    return `${parseFloat(m)} × 10<sup>${(+e).toString().replace("-", "−")}</sup>`;
+  }
+  return String(parseFloat(x.toPrecision(sig))).replace("-", "−");
+}
+function show(i) {
+  k = Math.max(0, Math.min(N - 1, i));
+  svg.replaceChildren();
+  drawStep(svg, TRACE, k);
+  const s = TRACE.steps[k];
+  drawLegend(s.legend || TRACE.legend);
+  document.querySelectorAll("#parts button").forEach(b => b.classList.toggle("on", +b.dataset.part === partOf(k)));
+  document.getElementById("narration").innerHTML = `<div class="step-title">${s.title || ""}</div>${s.narration || ""}`;
+  slider.value = k;
+  document.getElementById("count").textContent = `${k + 1} / ${N}`;
+}
+function play() {
+  if (timer) { clearInterval(timer); timer = null; document.getElementById("play").textContent = "▶︎ Play"; return; }
+  if (k === N - 1) show(0);
+  document.getElementById("play").textContent = "❚❚ Pause";
+  timer = setInterval(() => { if (k === N - 1) play(); else show(k + 1); }, TRACE.stepMs || 2500);
+}
+const present = on => document.body.classList.toggle("present", on);
+document.getElementById("first").onclick = () => show(0);
+document.getElementById("prev").onclick = () => show(k - 1);
+document.getElementById("next").onclick = () => show(k + 1);
+document.getElementById("last").onclick = () => show(N - 1);
+document.getElementById("play").onclick = play;
+document.getElementById("present").onclick = () => present(!document.body.classList.contains("present"));
+slider.oninput = () => show(+slider.value);
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" && e.target.type !== "range") return;
+  if (e.key === "ArrowRight") show(k + 1); else if (e.key === "ArrowLeft") show(k - 1);
+  else if (e.key === " ") { e.preventDefault(); play(); } else if (e.key === "f" || e.key === "F") present(!document.body.classList.contains("present"));
+  else if (e.key === "Escape") present(false);
+});
+/* URL parameters: ?step=3 or ?part=2, &present=1 (the stage alone, for a talk), &autoplay=1,
+   and, for render_media.py, &capture=1&theme=light */
+const params = new URLSearchParams(location.search);
+if (params.get("present")) present(true);
+if (params.get("capture")) document.body.classList.add("capture");
+if (params.get("theme")) document.documentElement.dataset.theme = params.get("theme");
+show(params.get("part") && PARTS[+params.get("part") - 1] ? PARTS[+params.get("part") - 1].step : +(params.get("step") || 0));
+if (params.get("autoplay")) play();
+window.demo = { show, count: N };
+
+/* quiz */
+const QUIZ = JSON.parse(document.getElementById("quiz-data").textContent);
+document.getElementById("quiz-box").innerHTML = QUIZ.map((q, i) =>
+  `<div class="q"><p>${i + 1}. ${q.q}</p>${q.options.map((o, j) => `<button data-q="${i}" data-o="${j}">${o}</button>`).join("")}<div class="feedback" id="fb${i}"></div></div>`).join("");
+document.getElementById("quiz-box").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const q = QUIZ[+b.dataset.q], right = +b.dataset.o === q.answer;
+  b.parentElement.querySelectorAll("button").forEach(x => x.classList.remove("right", "wrong"));
+  b.classList.add(right ? "right" : "wrong");
+  document.getElementById("fb" + b.dataset.q).textContent = (right ? "Correct. " : "Not quite. ") + q.explain;
+});
+</script>
+</body>
+</html>

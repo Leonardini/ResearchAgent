@@ -1,0 +1,12 @@
+# Evaluation workspaces and runs (inputs include unpublished and copyrighted material)
+*-workspace/
+eval-runs/
+**/evals/
+
+# Stray metadata downloads at the root
+/z*.json
+
+# Local clutter
+__pycache__/
+*.pyc
+.DS_Store

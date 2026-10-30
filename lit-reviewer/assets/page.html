@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root {
+  --bg: #fbfaf8; --panel: #ffffff; --ink: #1d1f23; --muted: #5f6672; --line: #e3e1dc;
+  --accent: #2f5d8a;
+  --red: #c0352b; --red-bg: #fbeceb; --amber: #b86e00; --amber-bg: #fdf3e2;
+  --green: #2e7d4f; --green-bg: #e9f5ee; --grey: #8a8f98; --grey-bg: #f1f1ef;
+  --chip: #f0efeb;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --panel: #1d2024; --ink: #e8e6e1; --muted: #a0a6b0; --line: #30343a;
+    --accent: #7fb0e0;
+    --red: #ff7b6e; --red-bg: #3a1f1d; --amber: #f2b250; --amber-bg: #3a2c15;
+    --green: #6ccf95; --green-bg: #183324; --grey: #9aa0a8; --grey-bg: #26292d; --chip: #272a2f;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --panel: #1d2024; --ink: #e8e6e1; --muted: #a0a6b0; --line: #30343a;
+  --accent: #7fb0e0;
+  --red: #ff7b6e; --red-bg: #3a1f1d; --amber: #f2b250; --amber-bg: #3a2c15;
+  --green: #6ccf95; --green-bg: #183324; --grey: #9aa0a8; --grey-bg: #26292d; --chip: #272a2f;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 64px; }
+a { color: var(--accent); }
+h1 { font-size: 1.55rem; margin: 0 0 4px; line-height: 1.25; }
+h2 { font-size: 1.1rem; margin: 28px 0 10px; }
+.sub { color: var(--muted); font-size: 0.9rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.counts { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+.count { flex: 1 1 140px; border-radius: 10px; padding: 10px 14px; border: 1px solid var(--line); background: var(--panel); }
+.count b { font-size: 1.6rem; display: block; line-height: 1.1; }
+.count.red b { color: var(--red); } .count.amber b { color: var(--amber); } .count.green b { color: var(--green); }
+.synthesis h3, .synthesis h4 { margin: 14px 0 6px; font-size: 1rem; }
+.synthesis p, .synthesis ul { margin: 6px 0; }
+.targets { margin: 0; padding: 0; list-style: none; }
+.targets li { padding: 6px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.targets li:first-child { border-top: 0; }
+.tid { font-weight: 600; font-variant-numeric: tabular-nums; min-width: 2.2em; }
+.tchips { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+.controls { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 10px 0; border-bottom: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 999px;
+  padding: 3px 11px; font-size: 0.85rem; cursor: pointer; user-select: none; }
+.chip[aria-pressed="false"] { opacity: 0.45; text-decoration: line-through; }
+.chip.red { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+.chip.amber { border-color: var(--amber); color: var(--amber); background: var(--amber-bg); }
+.chip.green { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+.chip.irrelevant, .chip.own { color: var(--grey); background: var(--grey-bg); }
+input[type=search], select { font: inherit; font-size: 0.88rem; padding: 4px 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+input[type=search] { flex: 1 1 180px; min-width: 0; }
+.shown { color: var(--muted); font-size: 0.85rem; margin: 8px 0; }
+.item { background: var(--panel); border: 1px solid var(--line); border-left: 6px solid var(--grey);
+  border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
+.item.red { border-left-color: var(--red); } .item.amber { border-left-color: var(--amber); }
+.item.green { border-left-color: var(--green); }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 0.82rem; color: var(--muted); }
+.date { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.badge { border-radius: 4px; padding: 0 6px; font-size: 0.75rem; border: 1px solid var(--line); }
+.badge.rel.red { color: var(--red); border-color: var(--red); } .badge.rel.amber { color: var(--amber); border-color: var(--amber); }
+.badge.rel.green { color: var(--green); border-color: var(--green); }
+.badge.new { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.badge.warn { color: var(--amber); border-color: var(--amber); }
+.title { font-weight: 600; font-size: 1rem; margin: 3px 0; display: block; overflow-wrap: anywhere; }
+.authors { font-size: 0.85rem; color: var(--muted); }
+.reason { margin: 6px 0 0; }
+details { margin-top: 6px; }
+summary { cursor: pointer; color: var(--accent); font-size: 0.85rem; }
+.ov { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.88rem; }
+.ov th, .ov td { text-align: left; vertical-align: top; padding: 5px 6px; border-top: 1px solid var(--line); }
+.ov th { color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+.v-done, .v-competing { color: var(--red); font-weight: 600; } .v-partial { color: var(--amber); font-weight: 600; } .v-related { color: var(--muted); }
+.passage { margin: 6px 0 0; padding: 4px 10px; border-left: 3px solid var(--accent); font-size: 0.85rem; }
+.passage .where { font-size: 0.78rem; white-space: nowrap; }
+blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+.abstract { font-size: 0.86rem; color: var(--muted); }
+.tabs { display: flex; gap: 6px; margin: 24px 0 0; border-bottom: 1px solid var(--line); }
+.tab { border: 0; background: none; font: inherit; padding: 8px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.matrix td:first-child { white-space: nowrap; }
+.log { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.log td, .log th { padding: 4px 6px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.scroll { overflow-x: auto; }
+.empty { color: var(--muted); padding: 20px 0; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.85rem; margin: 6px 0 0; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: baseline; }
+.themebtn { float: right; }
+@media (max-width: 600px) { .tchips { margin-left: 0; } .ov th:nth-child(4), .ov td:nth-child(4) { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <button class="chip themebtn" id="theme" title="Switch light / dark">◐</button>
+  <h1 id="name"></h1>
+  <div class="sub" id="subline"></div>
+  <p id="summary"></p>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--red)"></span><b>Red</b>: overlap risk, does all or part of a project target</span>
+    <span><span class="sw" style="background:var(--amber)"></span><b>Amber</b>: closely related</span>
+    <span><span class="sw" style="background:var(--green)"></span><b>Green</b>: background</span>
+  </div>
+  <div class="counts" id="counts"></div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="list" aria-selected="true">Literature</button>
+    <button class="tab" role="tab" data-tab="overlap" id="ovtab">Overlap with the project</button>
+    <button class="tab" role="tab" data-tab="reading">Summary</button>
+    <button class="tab" role="tab" data-tab="log">Search log</button>
+  </div>
+
+  <section id="tab-list">
+    <div class="controls">
+      <span id="relchips"></span>
+      <select id="type" aria-label="Type"></select>
+      <select id="since" aria-label="New since"></select>
+      <select id="target" aria-label="Target"></select>
+      <select id="known" aria-label="Cited by the project"><option value="">Cited or not</option><option value="no">Not yet cited by the project</option><option value="yes">Already cited by the project</option></select>
+      <select id="sort" aria-label="Sort"><option value="desc">Newest first</option><option value="asc">Oldest first</option><option value="risk">Overlap risk, then newest</option></select>
+      <input type="search" id="q" placeholder="Search titles, authors, reasons">
+    </div>
+    <div class="shown" id="shown"></div>
+    <div id="list"></div>
+  </section>
+
+  <section id="tab-overlap" hidden>
+    <p class="sub">For each project target and each result already obtained, the red and amber items that bear on it.
+      <b>Done</b>: the item already achieves it. <b>Partial</b>: it achieves part of it. <b>Competing</b>: its authors are visibly racing for it.
+      <b>Related</b>: it bears on it without achieving it. Quoted passages were checked word for word against the source's text.</p>
+    <div id="matrix"></div>
+  </section>
+
+  <section id="tab-reading" hidden>
+    <div class="panel synthesis" id="synthesis"></div>
+    <h2>Not read in full</h2>
+    <p class="sub">Red and amber items whose verdict rests on less than the full text (a subscription copy, or no open copy found). Check these yourself.</p>
+    <div class="panel"><ul class="targets" id="unread"></ul></div>
+    <h2>Project brief</h2>
+    <div class="panel"><ul class="targets" id="targets"></ul></div>
+  </section>
+
+  <section id="tab-log" hidden>
+    <p class="sub" id="logsub"></p>
+    <div class="scroll"><table class="log" id="log"></table></div>
+  </section>
+</main>
+<script>
+const D = /*__DATA__*/null;
+const REL = {red: "Overlap risk", amber: "Closely related", green: "Background", irrelevant: "Not relevant", own: "Project's own"};
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const B = D.brief, items = D.items, runs = D.runs;
+const lastRun = runs.length ? runs[runs.length - 1].id : null;
+const runIdx = Object.fromEntries(runs.map((r, i) => [r.id, i]));
+const tgt = Object.fromEntries([...(B.targets || []), ...(B.achieved || [])].map(t => [t.id, t]));
+const state = {rel: new Set(["red", "amber", "green"]), type: "", since: "", target: "", known: "", sort: "desc", q: ""};
+
+try { const t = localStorage.getItem("lr-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").onclick = () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  const nxt = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = nxt;
+  try { localStorage.setItem("lr-theme", nxt); } catch (e) {}
+};
+
+document.getElementById("name").textContent = B.name;
+document.getElementById("subline").textContent =
+  `${B.mode === "broad" ? "Broad review (papers, preprints, posts, repositories)" : "Paper review"} · ` +
+  `${B.active ? "active project" : "planned project"} · ${runs.length} run${runs.length === 1 ? "" : "s"}` +
+  (runs.length ? `, latest ${runs[runs.length - 1].date}` : "") + ` · built ${D.built.slice(0, 16).replace("T", " ")}`;
+document.getElementById("summary").textContent = B.summary;
+
+const count = r => items.filter(i => i.relevance === r).length;
+document.getElementById("counts").innerHTML = ["red", "amber", "green"].map(r =>
+  `<div class="count ${r}"><b>${count(r)}</b>${REL[r]}</div>`).join("") +
+  `<div class="count"><b>${count("irrelevant")}</b>screened out${count("own") ? ` · ${count("own")} the project's own` : ""}${D.unscreened ? ` · ${D.unscreened} unscreened` : ""}</div>`;
+
+// controls
+document.getElementById("relchips").innerHTML = ["red", "amber", "green", "irrelevant", "own"].filter(r => r !== "own" || count("own")).map(r =>
+  `<span class="chip ${r}" role="button" tabindex="0" data-rel="${r}" aria-pressed="${state.rel.has(r)}">${REL[r]} (${count(r)})</span>`).join(" ");
+document.querySelectorAll("[data-rel]").forEach(el => {
+  const toggle = () => { const r = el.dataset.rel; state.rel.has(r) ? state.rel.delete(r) : state.rel.add(r);
+    el.setAttribute("aria-pressed", state.rel.has(r)); render(); };
+  el.onclick = toggle; el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } };
+});
+const types = [...new Set(items.map(i => i.type))].sort();
+document.getElementById("type").innerHTML = `<option value="">All types</option>` +
+  types.map(t => `<option value="${t}">${t} (${items.filter(i => i.type === t).length})</option>`).join("");
+document.getElementById("since").innerHTML = `<option value="">Seen in any run</option>` +
+  runs.slice(1).map(r => `<option value="${r.id}">New since ${r.date} (${r.id})</option>`).join("");
+if (runs.length < 2) document.getElementById("since").hidden = true;
+document.getElementById("target").innerHTML = `<option value="">Any target</option>` +
+  Object.values(tgt).map(t => `<option value="${t.id}">${t.id}: ${esc(t.text.slice(0, 50))}</option>`).join("");
+if (!items.some(i => i.known)) document.getElementById("known").hidden = true;
+for (const [id, k] of [["type", "type"], ["since", "since"], ["target", "target"], ["known", "known"], ["sort", "sort"]])
+  document.getElementById(id).onchange = e => { state[k] = e.target.value; render(); };
+document.getElementById("q").oninput = e => { state.q = e.target.value.toLowerCase(); render(); };
+
+function authors(i) {
+  if (!i.authors || !i.authors.length) return "";
+  const a = i.authors.slice(0, 4).join(", ");
+  return a + ((i.n_authors || i.authors.length) > 4 ? " et al." : "");
+}
+function passages(o) {
+  return (o.passages || []).map(p => `<div class="passage">“${esc(p.quote)}” <a class="where" href="${esc(p.link)}" target="_blank" rel="noopener" title="Checked word for word against the source">${esc(p.where)} ✓</a></div>`).join("");
+}
+function ovTable(i) {
+  if (!i.overlap || !i.overlap.length) return "";
+  return `<table class="ov"><tr><th>Project</th><th>Overlap</th><th>What the item achieved</th><th>What remains for the project</th></tr>` +
+    i.overlap.map(o => `<tr><td><b>${esc(o.target)}</b> ${esc((tgt[o.target] || {}).text || "")}</td>` +
+      `<td class="v-${esc(o.verdict)}">${esc(o.verdict)}</td><td>${esc(o.item_achieved)}${passages(o)}</td><td>${esc(o.remaining || "")}</td></tr>`).join("") +
+    `</table>`;
+}
+function card(i) {
+  const isNew = runs.length > 1 && i.first_seen === lastRun;
+  const basis = i.basis === "abstract" ? `<span class="badge warn" title="Judged from the abstract only">abstract only</span>`
+    : i.basis ? `<span class="badge">read: ${esc(i.basis)}</span>` : "";
+  const link = i.link_status && i.link_status !== 200 ? `<span class="badge warn">link returned ${i.link_status}</span>` : "";
+  const hist = (i.history || []).filter(h => h.from !== "unscreened");
+  const extra = [
+    ovTable(i),
+    i.quote ? `<blockquote>${esc(i.quote)}${i.quote_where ? ` <span class="sub">(${esc(i.quote_where)} ✓)</span>` : ""}</blockquote>` : "",
+    i.abstract ? `<p class="abstract">${esc(i.abstract)}</p>` : "",
+    hist.length ? `<p class="sub">Verdict history: ${hist.map(h => `${esc(h.run)} ${esc(h.from)} → ${esc(h.to)} (${esc(h.why)})`).join("; ")}</p>` : "",
+    `<p class="sub">Date source: ${esc(i.date_basis || "?")}` +
+      `${(i.dates || []).length > 1 ? ` (other dates on record: ${i.dates.filter(d => d !== i.date).map(esc).join(", ")})` : ""}. Found via ${[...new Set((i.sources || []).map(s => s.via))].map(esc).join(", ")}` +
+      `${i.arxiv && !String(i.url).includes("arxiv") ? ` · <a href="https://arxiv.org/abs/${esc(i.arxiv)}" target="_blank" rel="noopener">arXiv ${esc(i.arxiv)}</a>` : ""}.</p>`
+  ].join("");
+  return `<article class="item ${i.relevance}">
+    <div class="meta"><span class="date">${esc(i.date || "undated")}</span>${(i.dates || []).filter(d => d && d !== i.date).length ? `<span title="Sorted by first public appearance">(also ${i.dates.filter(d => d && d !== i.date).map(esc).join(", ")})</span>` : ""}
+      <span class="badge rel ${i.relevance}">${REL[i.relevance]}</span><span class="badge">${esc(i.type)}</span>
+      ${isNew ? `<span class="badge new">new in ${esc(lastRun)}</span>` : ""}${i.known ? `<span class="badge" title="In the project's own reference list">cited by the project</span>` : ""}${basis}${link}
+      <span>${esc(i.venue || "")}</span></div>
+    <a class="title" href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a>
+    <div class="authors">${esc(authors(i))}</div>
+    ${i.reason ? `<p class="reason">${esc(i.reason)}</p>` : ""}
+    <details${i.relevance === "red" ? " open" : ""}><summary>${i.overlap && i.overlap.length ? "Overlap and details" : "Details"}</summary>${extra}</details>
+  </article>`;
+}
+function render() {
+  let xs = items.filter(i => state.rel.has(i.relevance));
+  if (state.type) xs = xs.filter(i => i.type === state.type);
+  if (state.since) xs = xs.filter(i => runIdx[i.first_seen] >= runIdx[state.since]);
+  if (state.target) xs = xs.filter(i => (i.overlap || []).some(o => o.target === state.target));
+  if (state.known) xs = xs.filter(i => !!i.known === (state.known === "yes"));
+  if (state.q) xs = xs.filter(i => [i.title, authors(i), i.reason, i.venue, i.abstract].join(" ").toLowerCase().includes(state.q));
+  const RANK = {red: 0, amber: 1, green: 2, own: 3, irrelevant: 4};
+  xs.sort((a, b) => {
+    if (state.sort === "risk" && RANK[a.relevance] !== RANK[b.relevance]) return RANK[a.relevance] - RANK[b.relevance];
+    const da = a.date || (state.sort === "asc" ? "9999" : "0000"), db = b.date || (state.sort === "asc" ? "9999" : "0000");
+    return state.sort === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+  });
+  document.getElementById("shown").textContent = `${xs.length} of ${items.length} items shown, ${state.sort === "risk" ? "sorted by overlap risk, then newest first" : `sorted by date (${state.sort === "desc" ? "newest" : "oldest"} first)`}`;
+  document.getElementById("list").innerHTML = xs.length ? xs.map(card).join("") : `<p class="empty">Nothing matches these filters.</p>`;
+}
+render();
+
+// overlap matrix
+(function () {
+  const rows = Object.values(tgt).map(t => {
+    const hits = items.filter(i => ["red", "amber"].includes(i.relevance))
+      .flatMap(i => (i.overlap || []).filter(o => o.target === t.id).map(o => ({i, o})))
+      .sort((a, b) => ({done: 0, partial: 1, competing: 2, related: 3}[a.o.verdict] - {done: 0, partial: 1, competing: 2, related: 3}[b.o.verdict]) || String(b.i.date).localeCompare(String(a.i.date)));
+    const kind = (B.achieved || []).some(a => a.id === t.id) ? "Already obtained by the project" : "Target";
+    return `<h2>${esc(t.id)} <span class="sub">${kind}</span></h2><p>${esc(t.text)}</p>` +
+      (hits.length ? `<div class="scroll"><table class="ov matrix"><tr><th>Item</th><th>Overlap</th><th>What the item achieved</th><th>What remains for the project</th></tr>` +
+        hits.map(({i, o}) => `<tr><td><span class="sw" style="background:var(--${i.relevance})"></span>${esc(i.date || "")}<br>` +
+          `<a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title.length > 70 ? i.title.slice(0, 68) + "…" : i.title)}</a></td>` +
+          `<td class="v-${esc(o.verdict)}">${esc(o.verdict)}</td><td>${esc(o.item_achieved)}${passages(o)}</td><td>${esc(o.remaining || "")}</td></tr>`).join("") + `</table></div>`
+        : `<p class="sub">No red or amber item bears on this.</p>`);
+  });
+  document.getElementById("matrix").innerHTML = rows.join("");
+})();
+
+document.getElementById("synthesis").innerHTML = D.synthesis_html || `<p class="sub">No synthesis written.</p>`;
+document.getElementById("targets").innerHTML =
+  (B.targets || []).map(t => `<li><span class="tid">${esc(t.id)}</span><span>${esc(t.text)}</span></li>`).join("") +
+  (B.achieved || []).map(t => `<li><span class="tid">${esc(t.id)}</span><span>${esc(t.text)} <span class="sub">(already obtained)</span></span></li>`).join("");
+
+(function () {
+  const why = i => i.fulltext && i.fulltext.status === "refused" ? "licence check refused the copy, not read" : i.basis === "citation" ? "judged from the manuscript's own description" : i.basis === "secondary" ? "judged from another work's description of it" : i.basis === "abstract" ? "judged from the abstract" : "no full text held";
+  const xs = items.filter(i => ["red", "amber"].includes(i.relevance) && i.basis !== "fulltext" && i.basis !== "page")
+    .sort((a, b) => (a.relevance === b.relevance ? 0 : a.relevance === "red" ? -1 : 1) || String(b.date).localeCompare(String(a.date)));
+  document.getElementById("unread").innerHTML = xs.length ? xs.map(i => `<li><span class="sw" style="background:var(--${i.relevance})"></span>` +
+    `<span><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a> <span class="sub">${esc(i.date || "")} · ${why(i)}` +
+    `${(i.dois || []).length ? ` · doi:${esc(i.dois[0])}` : ""}</span></span></li>`).join("") : `<li class="sub">Every red and amber item was read in full.</li>`;
+})();
+document.getElementById("logsub").textContent =
+  `${D.queries.length} searches across ${runs.length} run(s). Every item on this page came from one of them.`;
+document.getElementById("log").innerHTML = `<tr><th>Run</th><th>Source</th><th>Query</th><th>Results</th><th>New</th><th>Time</th></tr>` +
+  D.queries.map(q => `<tr><td>${esc(q.run)}</td><td>${esc(q.source)}${q.failed ? " (failed)" : ""}</td><td>${esc(q.query)}${q.note ? `<br><span class="sub">${esc(q.note)}</span>` : ""}</td>` +
+    `<td>${q.results}</td><td>${q.new}</td><td>${esc(String(q.time).slice(0, 16).replace("T", " "))}</td></tr>`).join("");
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
+  for (const s of ["list", "overlap", "reading", "log"]) document.getElementById("tab-" + s).hidden = s !== t.dataset.tab;
+});
+if (!B.active) document.getElementById("ovtab").textContent = "Overlap with the targets";
+</script>
+</body>
+</html>

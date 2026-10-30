@@ -1,0 +1,15 @@
+% referencer.sty -- the Referencer mode toggle for LaTeX drafts.
+%   \referencermode{final}         compile as usual (this package then does nothing)
+%   \referencermode{verification}  build the evidence view with: referencer.py build <draft>.tex
+% pdflatex never renders the verification view; it only warns, so a verification-mode
+% draft is not sent out by mistake.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{referencer}[2026/10/23 Referencer mode toggle]
+\def\referencer@mode{final}
+\newcommand{\referencermode}[1]{\def\referencer@mode{#1}}
+\AtEndDocument{%
+  \def\referencer@verification{verification}%
+  \ifx\referencer@mode\referencer@verification
+    \PackageWarningNoLine{referencer}{Draft is in verification mode; this PDF is the
+      ordinary compilation. Run referencer.py build for the evidence view}%
+  \fi}

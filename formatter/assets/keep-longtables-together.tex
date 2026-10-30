@@ -1,0 +1,8 @@
+% Formatter: keep every longtable on one page.
+% Each row ending behaves like \\* (no page break after it), so a table that would break moves
+% whole to the next page. Use only when every table is shorter than a page: a longer table would
+% run off the bottom. Include once in the preamble (pandoc: list it under include-in-header).
+\makeatletter
+\def\LT@tabularcr{\relax\iffalse{\fi\ifnum0=`}\fi\@ifstar{\fmt@nobreakcr}{\fmt@nobreakcr}}
+\def\fmt@nobreakcr{\def\crcr{\LT@crcr\noalign{\nobreak}}\let\cr\crcr\LT@t@bularcr}
+\makeatother
