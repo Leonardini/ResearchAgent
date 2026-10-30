@@ -1,7 +1,7 @@
 # Research agent skills
 
 Seven skills for writing and checking scientific papers with Claude Code. They also work in
-Codex, but that use is less tested.
+Codex (see "Installing in Codex"), where only the Illustrator has been tested.
 
 | Skill | What it does |
 |---|---|
@@ -50,9 +50,27 @@ To update, run `git pull` in the clone. The links pick up the change.
 Use WSL, or clone with `git clone -c core.symlinks=true` from a terminal that is allowed to create
 symlinks.
 
-**Codex:** `illustrator` was built in Codex and carries a Codex description file
-(`agents/openai.yaml`). These instructions cover Claude Code only. Using the skills in Codex
-has not been tested.
+## Installing in Codex
+
+Codex reads workspace skills from `.agents/skills/` and follows symbolic links
+([Codex documentation](https://learn.chatgpt.com/docs/build-skills)). From the workspace's root
+(replace `/path/to/ResearchAgent` with where you cloned it):
+
+```sh
+mkdir -p .agents/skills
+ln -s /path/to/ResearchAgent/illustrator .agents/skills/illustrator
+```
+
+Restart Codex if the skill does not appear. In Codex a skill is invoked with `$`, not `/`:
+
+```
+$illustrator Create figures for the salient results in my manuscript.
+```
+
+The link keeps the installed skill in step with the clone, so `git pull` updates it. Only
+`illustrator` has been used in Codex so far; it was built there and carries a Codex description
+file (`agents/openai.yaml`). The other skills are linked the same way but rely on their
+`SKILL.md` alone, and have not been tested in Codex.
 
 ## What each skill needs
 
