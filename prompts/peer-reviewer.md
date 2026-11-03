@@ -48,3 +48,16 @@ The PeerReviewer is a skill that emulates a highly competent, yet highly constru
   every pseudocode choice specified): "agreed on the choice".
 - **"Is a stronger statement available from the same proof?"** for each theorem: "helpful, so
   let's add".
+
+## Revisions after the Kemeny MSS runs (2026-11-03)
+
+- **Outside searches:** his words, "it is allowed to do outside searches by default". No
+  confirmation is needed for literature databases, web search or open copies, including as a
+  subagent (the p1 run had to take the brief as consent; the p2 run skipped LitReviewer for lack
+  of it). Unchanged: queries in our own words, and his email never sent without asking.
+- **Novelty check, not a full review:** LitReviewer was heavy for a referee's check, so the
+  skill now asks for one round, paper mode, closest prior work only.
+- **No verdict, firmly:** the p1 run gave "major revision" ("the template gives no verdict, so
+  that call is mine"); the rule now covers venue-referee framing and the chat summary.
+- **Caller-named report paths:** a brief that names the file broke the r<N> name pattern, so the
+  next round now also finds a report by its "— round <N>" title and the deferred file follows the report's stem.

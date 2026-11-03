@@ -80,12 +80,18 @@ small ones).
 
 If the contribution's novelty or its relation to prior work is unclear, use the **LitReviewer**
 skill if it is available: give it two or three questions describing the contribution in your
-own words (never the manuscript's text) and ask for the closest prior work. At the time of
-writing LitReviewer is a placeholder filled by Undermind; it may change, so call whatever
-skill carries that name. Using it sends a query to an outside service, so ask the user first
-unless they have already agreed in this conversation. Without it, search the web, and read
-full text only from open copies (arXiv, bioRxiv, open access); for anything else, use the
-title, abstract and short quotes.
+own words (never the manuscript's text) and ask for the closest prior work. Run it as a
+**novelty check, not a full review**: paper mode, one round of searches, stop once the
+closest prior work for each question is found, and skip its web page unless the user wants
+it. Without the skill, search the web directly, and read full text only from open copies
+(arXiv, bioRxiv, open access); for anything else, use the title, abstract and short quotes.
+
+**Outside searches are allowed by default**: literature databases (Undermind, OpenAlex,
+Semantic Scholar, arXiv), web search and fetching open copies need no confirmation, including
+when the skill runs as a subagent. Two limits still hold: the queries describe the work in
+your own words (see **Inputs**), and the user's email address is never sent to any service
+(for example an Unpaywall `email=` or an OpenAlex `mailto=` parameter) unless the user has
+agreed to it in this conversation.
 
 Use what you find to judge novelty and to name specific missing or mischaracterised work. A
 missing reference is a point only if it changes how the contribution should be read.
@@ -145,7 +151,10 @@ remedy. If a point seems to need more, the extra is usually evidence the authors
 in full: give the conclusion and one line of the derivation ("at n = 4, A_T is a segment").
 Count the words before finishing and cut until the report fits.
 
-Give no overall verdict or score. The loop decides when to stop.
+Give no overall verdict, score or recommendation (accept, minor or major revision, reject),
+not in the report and not in the chat summary, even when reviewing "as a referee for" a named
+venue whose forms ask for one. The loop decides when to stop. If the user explicitly asks for
+a recommendation, give it in chat, in one line, with the point that decides it.
 
 ### 7. A style pass with scientific-humanizer
 
@@ -160,7 +169,8 @@ say so and skip it.
 ## The loop
 
 The skill is called repeatedly: review → the authors fix → review again. When a previous
-review is supplied (or found as the newest `*_peer-review-r<N>.md` beside the manuscript),
+review is supplied (or found as the newest `*_peer-review-r<N>.md`, or the newest report whose title
+ends "— round <N>", beside the manuscript or in its `reviews/` folder),
 start the report with **Status of previous points**: for each earlier point, resolved,
 partly resolved, or not resolved, with one line on what changed or what is still missing.
 Check the revised text itself; do not take a response letter's word for it.
@@ -179,7 +189,10 @@ summary.
 Write the report beside the manuscript, in a `reviews/` folder if one exists:
 `<YYYY-MM-DD>_peer-review-r<N>.md`, with N the round number (1 if no earlier
 `*_peer-review-r*.md` exists). Write the deferred points, if any, to
-`<YYYY-MM-DD>_peer-review-r<N>_deferred.md` in the same folder. In chat, give the counts
+`<YYYY-MM-DD>_peer-review-r<N>_deferred.md` in the same folder. If the user (or the agent
+that called you) names the report's path, use it, write the deferred points beside it as
+`<report stem>_deferred.md`, and keep the template's title line (`# Review of "…" — round <N>`)
+so the next round can find it by content rather than by name. In chat, give the counts
 (major, minor, and for later rounds resolved / partly / not), the one-line titles of the
 major points, and the path. Do not paste the whole report.
 
