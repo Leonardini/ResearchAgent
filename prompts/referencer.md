@@ -177,3 +177,28 @@ terms in `evidence/search_terms.json`, for formulas, table rows and theorem name
 - `cited_claim` ignores `;` and `:` inside citation groups and maths.
 
 Tested on an open arXiv copy (Forcey 2016) with a scripted driver.
+
+## Fixes after the Kemeny MSS runs (2026-11-03)
+
+His words: "Let's fix the referencer for figure captions and license refusals".
+- Citations inside raw-LaTeX figure captions in a Markdown draft were silently skipped (pandoc leaves
+  raw LaTeX unparsed). Each `\caption{...}` is now parsed as Markdown (`\cite{a,b}` read as `[@a; @b]`),
+  inserted as a "Caption:" paragraph after its block, and `check` warns that citeproc will not resolve
+  a citation there in the final PDF.
+- A licence refusal during `add` was not recorded, so the worksheet said "no open copy found". It is now
+  stored in sources.json (status refused, unless a text is already held) and shown as the reason.
+- Dash at a line end (his "go for both", 2026-11-03): only a true hyphen after a letter is undone
+  as a hyphenation; en/em dashes and minus signs stay, and spacing around a dash is ignored on both
+  sides. `test_normalise.py` holds 11 known-answer cases (3 negative). Citation IDs hash the sentence
+  with the old normalisation (`id_text`, frozen) so recorded assessments keep their IDs: the
+  first attempt re-keyed 7 + 3 Kemeny assessments to "unchecked", caught by an old-vs-new check run.
+- `fetch --key` no longer rewrites missing.md with only the fetched keys.
+- `keyify DRAFT BIB` ("Let's fix the author-year citations please"): the documented route for
+  author-year drafts with a typed reference list; writes DRAFT_keyed.md citing the .bib, reports
+  unconvertible and loose citations. Kemeny paper 2: 58 citations of 25/25 works, identical to the
+  agent's hand-made copy; paper 1: 33/33 works, and its three loose citations ("McKay's catalogue
+  (2026)") are exactly where it differs from the agent's hand-keyed copy.
+- `add --download` ("let's fix the --download option so it fails gracefully"): a 404, a bad host or a
+  timeout now exits 1 with the reason ("HTTP 404 Not Found") instead of a traceback, records the
+  attempt in sources.json (shown in missing.md and the worksheet), installs nothing, and never
+  downgrades a text already held.

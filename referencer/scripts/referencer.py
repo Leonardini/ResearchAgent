@@ -17,12 +17,15 @@ Subcommands (DRAFT is a pandoc Markdown or LaTeX file):
   build   DRAFT                 verification mode: write evidence/html/; final: nothing
   worksheet DRAFT [--import]    citations the agent could not read, for the author to tick by hand
   terms   DRAFT ID TERM...      suggest search terms for one citation, for `assist`
+  keyify  DRAFT BIB             author-year draft with a typed reference list: write DRAFT_keyed.md
+                                with pandoc citations against BIB (the draft is only read)
   assist  DRAFT KEY --pdf FILE  FOR THE AUTHOR, in their own terminal: check KEY's citations
                                 against their own copy; the agent never sees the text
 
 Needs pandoc (>= 3) and pdftotext (poppler). Python standard library only.
 """
 import argparse
+from collections import Counter
 import bisect
 import datetime
 import hashlib
@@ -95,12 +98,27 @@ _TRANSLATE = str.maketrans({**dict.fromkeys(map(ord, "\u2010\u2011\u2012\u2013\u
 
 
 def dehyphenate(s):
-    return re.sub(r"-[ \t]*\n\s*", "", s)
+    """Undo a hyphenation split across a line break: only a true hyphen (ASCII, U+2010 or a
+    soft hyphen) directly after a letter. A dash at a line end (an em dash, an en dash in a
+    range, a "-" table cell, a minus sign) is a real character and stays."""
+    return re.sub(r"(?<=\w)[-\u2010\u00ad][ \t]*\n\s*", "", s)
+
+
+def id_text(s):
+    """The citing sentence as it enters a citation's ID. Frozen at the normalisation the IDs
+    were first made with: changing it would re-key every recorded assessment, so quote matching
+    (normalise) may improve without touching it."""
+    s = unicodedata.normalize("NFKC", s).translate(_TRANSLATE)
+    s = re.sub(r"-[ \t]*\n\s*", "", s)
+    s = re.sub(r"(?<=\w)-(?=\w)", "", s)
+    s = re.sub(r"\s+", " ", s)
+    return s.casefold().strip()
 
 
 def normalise(s):
-    s = unicodedata.normalize("NFKC", s).translate(_TRANSLATE)
-    s = dehyphenate(s)
+    s = dehyphenate(unicodedata.normalize("NFKC", s)).translate(_TRANSLATE)
+    # Spacing around a dash varies between a PDF's text and a quote typed on one line.
+    s = re.sub(r"\s*-\s*", "-", s)
     s = re.sub(r"(?<=\w)-(?=\w)", "", s)
     s = re.sub(r"\s+", " ", s)
     return s.casefold().strip()
@@ -240,6 +258,49 @@ def text_runs(node, ctx=None):
             yield from text_runs(note)
 
 
+def latex_captions(tex):
+    """The text of every \\caption[...]{...} in a raw LaTeX block, braces matched."""
+    out = []
+    for m in re.finditer(r"\\caption\s*(?:\[[^\]]*\])?\s*\{", tex):
+        depth, i = 1, m.end()
+        while i < len(tex) and depth:
+            depth += {"{": 1, "}": -1}.get(tex[i], 0) if tex[i - 1] != "\\" else 0
+            i += 1
+        if depth == 0:
+            out.append(tex[m.end():i - 1])
+    return out
+
+
+def expand_raw_captions(blocks, paper):
+    """After each raw LaTeX block holding a \\caption, insert the caption as a paragraph, parsed
+    as Markdown (with \\cite{a,b} read as [@a; @b]), so its citations are instances like any
+    other. A citation there is also a warning: in a Markdown draft citeproc never sees raw
+    LaTeX, so `[@key]` prints literally and `\\cite{key}` stays unresolved in the final PDF."""
+    out = []
+    for b in blocks:
+        if isinstance(b, dict) and b.get("t") == "Div":
+            b["c"][1] = expand_raw_captions(b["c"][1], paper)
+        out.append(b)
+        if not (isinstance(b, dict) and b.get("t") == "RawBlock" and b["c"][0] in ("latex", "tex")):
+            continue
+        for cap in latex_captions(b["c"][1]):
+            md = re.sub(r"\\cite[tp]?\*?\s*(?:\[[^\]]*\])*\{([^}]*)\}",
+                        lambda m: "[" + "; ".join("@" + k.strip() for k in m.group(1).split(",")) + "]", cap)
+            parsed = json.loads(run(["pandoc", "-f", "markdown", "-t", "json"], cwd=paper.root, stdin=md))
+            inlines = [x for blk in parsed["blocks"] if blk["t"] in ("Para", "Plain") for x in blk["c"] + [{"t": "Space"}]]
+            if not inlines:
+                continue
+            keys = [k for x in inlines if x.get("t") == "Cite" for k in cite_keys(x)]
+            if keys:
+                paper.raw_caption_warnings.append(
+                    f"raw LaTeX caption cites {', '.join('@' + k for k in keys)}: checked here, but citeproc "
+                    f"does not see raw LaTeX, so the final PDF will not resolve it (\"{cap[:60]}…\")")
+            out.append({"t": "Para", "c": [{"t": "Span", "c": [["", ["raw-caption"], []],
+                                                              [{"t": "Strong", "c": [{"t": "Str", "c": "Caption:"}]},
+                                                               {"t": "Space"}] + inlines[:-1]]}]})
+    return out
+
+
 _BOUNDARY = re.compile(r"[.!?][\"\u201d\u2019)\]]*\s+")
 
 
@@ -291,6 +352,12 @@ class Paper:
             cmd += ["-f", self.defaults["from"]]
         self.ast = json.loads(run(cmd, cwd=self.root))
         self.meta = {k: meta_value(v) for k, v in self.ast["meta"].items()}
+        # Markdown drafts often carry figures as raw LaTeX, which pandoc leaves unparsed, so
+        # the citations in their captions would be missed. Each caption becomes a visible
+        # paragraph after its block (the HTML drops raw LaTeX anyway).
+        self.raw_caption_warnings = []
+        if not self.is_tex:
+            self.ast["blocks"] = expand_raw_captions(self.ast["blocks"], self)
 
     def _find_defaults(self, given):
         """A pandoc defaults file supplies the reader options and the bibliography when the
@@ -353,7 +420,7 @@ class Paper:
                 # Marking the target inside the sentence keeps two citations of one sentence
                 # apart: deleting one never hands its assessment to the other.
                 marked = sentence[:span[0]] + "⟦" + sentence[span[0]:span[1]] + "⟧" + sentence[span[1]:]
-                base = hashlib.sha1(f"{normalise(marked)}|{','.join(keys)}".encode()).hexdigest()[:10]
+                base = hashlib.sha1(f"{id_text(marked)}|{','.join(keys)}".encode()).hexdigest()[:10]
                 seen[base] = seen.get(base, 0) + 1
                 iid = base if seen[base] == 1 else f"{base}-{seen[base]}"
                 out.append({
@@ -1059,7 +1126,9 @@ def cmd_fetch(paper, args):
         log(f"{n}/{len(keys)} {key}: {s['status']}" + (f" ({s.get('source')})" if s["status"] == "ok" else "")
             + (f"; RETRACTION NOTICE: {notice_text(s['retraction'])}" if s.get("retraction", {}).get("retracted") else ""))
         sources_path.write_text(json.dumps(sources, indent=1))
-    missing = write_missing(paper, entries, keys, sources)
+    # missing.md lists every cited work still missing, also when only some keys were fetched.
+    every = sorted({k for i in insts for k in i["keys"]})
+    missing = [k for k in write_missing(paper, entries, every, sources) if k in keys]
     print(f"{len(keys) - len(missing)}/{len(keys)} full texts available; "
           f"{len(missing)} missing, listed in {paper.ev / 'missing.md'}")
     for k in keys:
@@ -1079,6 +1148,9 @@ def cmd_todo(paper, args):
 
 
 def cmd_find(paper, args):
+    if not FullText.available(paper, args.key):
+        sys.exit(f"@{args.key}: no full text in {paper.fulltext} (run fetch, or add one; a refused "
+                 f"subscription copy stays on the worksheet)")
     ft = FullText(paper, args.key)
     for term in args.terms:
         words = re.findall(r"\w+", term)
@@ -1161,13 +1233,29 @@ def cmd_add(paper, args):
         if len(args.rest) != 1:
             sys.exit("add --download needs KEY only")
         key, url = args.rest[0], args.download
-        data = http_get(url, timeout=90)
+
+        def download(u):
+            # A failed download stops the command with the reason, and is recorded so the
+            # worksheet and missing.md show it; nothing is installed.
+            try:
+                return http_get(u, timeout=90)
+            except NETWORK_ERRORS as e:
+                why = f"HTTP {e.code} {e.reason}" if isinstance(e, urllib.error.HTTPError) else str(getattr(e, "reason", e))
+                sources_path = paper.ev / "sources.json"
+                sources = json.loads(sources_path.read_text()) if sources_path.exists() else {}
+                entry_s = sources.setdefault(key, {"status": "missing", "tried": []})
+                entry_s.setdefault("tried", []).append(f"add --download {u}: {why}")
+                paper.ev.mkdir(parents=True, exist_ok=True)
+                sources_path.write_text(json.dumps(sources, indent=1))
+                sys.exit(f"{key}: not added: downloading {u} failed ({why}). Check the address, or download the "
+                         f"file another way and pass it as FILE.")
+        data = download(url)
         kind = sniff(data)
         if kind == "html":
             inner = landing_pdf_url(data, url)
             if not inner:
                 sys.exit(f"{url} is a web page with no declared PDF; download the file another way and pass it as FILE")
-            url, data = inner, http_get(inner, timeout=90)
+            url, data = inner, download(inner)
             kind = sniff(data)
         supplied = False
     else:
@@ -1194,6 +1282,19 @@ def cmd_add(paper, args):
     if probe:
         probe.unlink()
     if v and v["refused"] and args.version != "abstract":
+        # Record the refusal, so the worksheet says why the agent could not read this work
+        # ("subscription copy ...") rather than "no open copy found". A text already held stays.
+        sources_path = paper.ev / "sources.json"
+        sources = json.loads(sources_path.read_text()) if sources_path.exists() else {}
+        had = sources.get(key, {})
+        tried = had.get("tried", []) + [f"add {url or args.rest[-1]}: {refusal_text(v)}"]
+        if had.get("status") == "ok":
+            had["tried"] = tried
+        else:
+            sources[key] = {"status": "refused", "why": refusal_text(v), "tried": tried}
+        sources_path.write_text(json.dumps(sources, indent=1))
+        insts = paper.instances()
+        write_missing(paper, paper.bib_entries(), sorted({k for i in insts for k in i["keys"]}), sources)
         sys.exit(f"{key}: not added: {refusal_text(v)}. It stays on the worksheet for the author to check "
                  f"by hand (`referencer.py worksheet`). Only the author can lift this, in their own words "
                  f"(license-check allow).")
@@ -1259,6 +1360,8 @@ def cmd_locate(paper, args):
     why = integrity(paper, key, logged)
     if why:
         sys.exit(f"@{key}: {why}")
+    if not FullText.available(paper, key):
+        sys.exit(f"@{key}: no full text in {paper.fulltext}")
     chunk, err = FullText(paper, key).locate(quote)
     if err:
         sys.exit(f"@{key}: {err}")
@@ -1630,6 +1733,8 @@ def cmd_check(paper, args):
     retrieve = to_retrieve(paper, insts, results, paper.bib_entries())
     counts, text = summarise(insts, results, stale, paper.log_report, retrieve)
     print(text)
+    for w in paper.raw_caption_warnings:
+        print(f"  warning: {w}")
     return 1 if counts["error"] else 0
 
 
@@ -1968,10 +2073,132 @@ def evidence_page(paper, inst, res, entries):
     return page(f"Citation {inst['n']}", body)
 
 
+# ---------------------------------------------------------------------------------------
+# Author-year drafts: a keyed copy.
+
+_AY_PARTICLE = r"(?:(?:van|von|de|der|den|du|da|di|del|le|la|ter)\s+)*"
+_AY_SURNAME = _AY_PARTICLE + r"[A-Z][^\W\d_][\w'\u2019.-]*"
+_AY_JOIN = r"(?:\s*,\s*|,?\s+(?:and|&)\s+|\s*[\u2013\u2014]\s*)"
+_AY_GROUP = (rf"(?<![\w'\u2019@-])(?P<first>{_AY_SURNAME})(?:\s+Foundation\s+Inc\.)?(?:{_AY_JOIN}{_AY_SURNAME})*"
+             r"(?:\s+et\s+al\.?)?(?:['\u2019]s)?")
+_AY_YEAR = r"(?:1[5-9]|20)\d\d[a-z]?"
+AY_NARR = re.compile(rf"{_AY_GROUP}\s*\(\s*(?P<years>{_AY_YEAR}(?:\s*[,;]\s*{_AY_YEAR})*)(?:,\s*(?P<loc>[^()]*?))?\s*\)")
+AY_BARE = re.compile(rf"{_AY_GROUP},?\s+(?P<years>{_AY_YEAR})\b")
+AY_PIECE = re.compile(rf"(?P<pre>[^;]*?){_AY_GROUP},?\s+(?P<years>{_AY_YEAR}(?:\s*,\s*{_AY_YEAR})*)(?:,\s*(?P<loc>.*))?$", re.S)
+
+
+def ay_index(entries):
+    """(surname, year) -> key, from the bibliography: the first author's family name (with its
+    particle), or the first word of an institution. A year suffix is read from the key
+    ("oeis2026a"), so suffixed works must carry it there."""
+    idx = {}
+    for key, e in entries.items():
+        a = (e.get("author") or e.get("editor") or [{}])[0]
+        particle = a.get("non-dropping-particle") or a.get("dropping-particle") or ""
+        names = {a.get("family", ""), f"{particle} {a.get('family', '')}".strip(),
+                 re.split(r"[\s,]+", (a.get("literal") or "").strip())[0]}
+        year = str(((e.get("issued") or {}).get("date-parts") or [[""]])[0][0])
+        m = re.search(rf"{year}([a-z])$", key) if year else None
+        for n in filter(None, names):
+            idx[(n.casefold(), year + (m.group(1) if m else ""))] = key
+    return idx
+
+
+def ay_keys(idx, first, years):
+    first = re.sub(r"['\u2019]s$", "", re.split(r"[\u2013\u2014]", first)[0])
+    keys = [idx.get((first.casefold(), y)) for y in re.split(r"\s*[,;]\s*", years)]
+    return keys if all(keys) else None
+
+
+def keyify_text(text, idx, unmapped):
+    """Rewrite author-year citations outside maths and code as pandoc citations."""
+    def narrative(m):
+        keys = ay_keys(idx, m.group("first"), m.group("years"))
+        if not keys:
+            unmapped.append(m.group(0))
+            return m.group(0)
+        loc = f" [{m.group('loc')}]" if m.group("loc") else ""
+        return f"@{keys[0]}{loc}" if len(keys) == 1 else "[" + "; ".join("@" + k for k in keys) + "]"
+
+    def parenthetical(m):
+        parts = []
+        for piece in re.split(r";\s*", m.group(1)):
+            pm = AY_PIECE.match(piece.strip())
+            keys = pm and ay_keys(idx, pm.group("first"), pm.group("years"))
+            if not keys:
+                if re.search(_AY_YEAR, piece) and re.search(r"[A-Z][a-z]", piece):
+                    unmapped.append(m.group(0))
+                return m.group(0)
+            pre = pm.group("pre").strip()
+            loc = f", {pm.group('loc').strip()}" if pm.group("loc") else ""
+            parts += [(f"{pre} " if pre and i == 0 else "") + "@" + k + (loc if i == len(keys) - 1 else "")
+                      for i, k in enumerate(keys)]
+        return "[" + "; ".join(parts) + "]"
+
+    def bare(m):
+        # "see Burnside 1911", or a group the parenthesis pass could not split ("(A 2019, B 2026)"):
+        # converted only when the surname and year name a work in the bibliography.
+        keys = ay_keys(idx, m.group("first"), m.group("years"))
+        return "; ".join("@" + k for k in keys) if keys else m.group(0)
+
+    out = []
+    for seg in re.split(r"(\$\$.*?\$\$|\$[^$]*\$|`[^`]*`)", text, flags=re.S):
+        if seg.startswith(("$", "`")):
+            out.append(seg)
+            continue
+        seg = AY_NARR.sub(narrative, seg)
+        seg = re.sub(r"\(([^()]*\b" + _AY_YEAR + r"\b[^()]*)\)", parenthetical, seg)
+        seg = AY_BARE.sub(bare, seg)
+        out.append(seg)
+    return "".join(out)
+
+
+def cmd_keyify(paper, args):
+    """`keyify DRAFT BIB`: for a Markdown draft that cites author-year in plain text ("Smith and
+    Jones (2009)", "(Smith 2009; Jones et al. 2013, Theorem 2)") with a typed reference list,
+    write DRAFT_keyed.md, in which those citations are pandoc citations against BIB, and point
+    its YAML header at BIB. The draft itself is only read; the typed reference list is copied
+    unchanged. Run the skill on the keyed copy."""
+    if paper.is_tex or len(args.rest) != 1:
+        sys.exit("keyify needs a Markdown DRAFT and the BIB built from its reference list")
+    bib = Path(args.rest[0]).expanduser().resolve()
+    entries = {e["id"]: e for e in json.loads(run(["pandoc", str(bib), "-f", "biblatex", "-t", "csljson"]))}
+    idx = ay_index(entries)
+    text = paper.draft.read_text()
+    m = re.search(r"(?m)^#+\s*(?:\d+\.?\s*)?(?:References|Bibliography)\s*$", text)
+    nxt = re.search(r"(?m)^#", text[m.end():]) if m else None
+    a, b = (m.start(), m.end() + nxt.start()) if nxt else (m.start(), len(text)) if m else (len(text), len(text))
+    unmapped = []
+    pre, post = keyify_text(text[:a], idx, unmapped), keyify_text(text[b:], idx, unmapped)
+    unmapped = [u for u in unmapped if u in pre or u in post]  # still there after every pass
+    body = pre + text[a:b] + post
+    rel = os.path.relpath(bib, paper.root)
+    body = body.replace("---\n", f"---\nbibliography: {rel}\n", 1) if body.startswith("---\n") else \
+        f"---\nbibliography: {rel}\n---\n\n" + body
+    out = paper.draft.with_name(paper.draft.stem + "_keyed.md")
+    out.write_text(body)
+    used = Counter(re.findall(r"@([\w:.-]*\w)", pre + post))
+    print(f"{sum(used[k] for k in entries)} citations of {sum(1 for k in entries if used[k])}/{len(entries)} "
+          f"works keyed -> {out}")
+    for k in sorted(k for k in entries if not used[k]):
+        print(f"  never cited: @{k}")
+    # A bibliography surname with its year in brackets a few words later ("McKay's digraph
+    # archive (2026)") is probably a citation too loose to convert safely: list it.
+    loose = []
+    for (name, year), key in idx.items():
+        for m in re.finditer(rf"(?i)(?<![@\w]){re.escape(name)}\b[^@()\n]{{1,40}}\(\s*{year}\s*\)", pre + post):
+            loose.append(f"@{key}?: {m.group(0)}")
+    for u in dict.fromkeys(unmapped):
+        print(f"  not mapped (key it by hand in the copy): {u[:100]}")
+    for u in dict.fromkeys(loose):
+        print(f"  possible citation, not converted (check by hand): {u[:100]}")
+    return 1 if unmapped or loose else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "mode", "extract", "fetch", "add", "todo", "find",
-                                        "locate", "record", "check", "build", "worksheet", "assist", "terms"])
+                                        "locate", "record", "check", "build", "worksheet", "assist", "terms", "keyify"])
     ap.add_argument("draft")
     ap.add_argument("rest", nargs="*",
                     help="mode: final|verification; add: KEY FILE; find: KEY TERM...; record: KEY ID")
@@ -2007,7 +2234,7 @@ def main():
     commands = {"init": cmd_init, "mode": cmd_mode, "extract": cmd_extract, "fetch": cmd_fetch,
                 "add": cmd_add, "todo": cmd_todo, "find": cmd_find, "locate": cmd_locate, "record": cmd_record,
                 "check": cmd_check, "build": cmd_build, "worksheet": cmd_worksheet,
-                "assist": cmd_assist, "terms": cmd_terms}
+                "assist": cmd_assist, "terms": cmd_terms, "keyify": cmd_keyify}
     sys.exit(commands[args.command](paper, args) or 0)
 
 

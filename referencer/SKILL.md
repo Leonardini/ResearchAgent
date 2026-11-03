@@ -89,6 +89,23 @@ defaults file named in the folder's Makefile (`--defaults FILE` gives one explic
 
 ### 1. Set up and list the citations
 
+**Author-year drafts with a typed reference list** ("Smith and Jones (2009)", "(Smith 2009;
+Jones et al. 2013)", no `.bib`): never edit the draft. Build a `.bib` beside it from the
+reference list, one entry per reference with its DOI where the list gives one, keys
+`firstauthorYEAR` and a letter for works that share an author and year (`oeis2026a`: the
+letter is read from the key). Then
+
+```
+referencer.py keyify paper.md paper_refs.bib   # -> paper_keyed.md, citing the .bib
+```
+
+writes a keyed copy, and the rest of the workflow runs on `paper_keyed.md`. It converts
+narrative, bracketed and running-text citations with locators ("(Chung and Graham 1991,
+Section 6)" becomes `@chung1991 [Section 6]`), skips maths and code, and leaves the typed
+list alone. It lists what it could not convert (a citation whose work is not in the `.bib`)
+and loose forms such as "McKay's catalogue (2026)": key those by hand in the copy. Report
+any work it says is never cited.
+
 ```
 referencer.py init    paper.md   # adds the toggle (final) and evidence/
 referencer.py extract paper.md   # -> evidence/citations.json
