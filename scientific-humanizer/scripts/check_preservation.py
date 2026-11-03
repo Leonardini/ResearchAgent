@@ -7,8 +7,11 @@ ORIGINAL and REWRITE are files (a manuscript before and after editing, or a pass
 to two files). The script extracts, from each, the items whose exact text carries meaning:
 
   maths       $...$, $$...$$, \\(...\\), \\[...\\], and equation-like LaTeX environments
-  citations   [@key], @key, \\cite{...} and its variants (each key counted separately)
-  references  \\ref, \\eqref, \\cref, \\autoref, \\label, pandoc {#id} and @fig:/@sec:/@tbl:/@eq: ids
+  citations   [@key], @key, \\cite{...} and its variants (each key counted separately), and
+              author-year citations typed as text: "Smith and Jones (2009)", "Smith et al. (2013a)",
+              "(Smith, 2009; Jones et al., 2013)" (each author-year pair counted separately)
+  references  \\ref, \\eqref, \\cref, \\autoref, \\label, pandoc {#id} and @fig:/@sec:/@tbl:/@eq: ids,
+              and references typed by hand: "Section 3.4", "Appendix A.6", "Theorems 2.1 and 2.3"
   numbers     digit strings outside maths (12, 3.5, 10^4, 95%), with their units if attached
   urls, code  http(s) links and `inline code`
 
@@ -32,6 +35,51 @@ PATTERNS = {
         r"(?<![\\$])\$(?!\$)(?:\\\$|[^$])+?\$",
     ],
 }
+
+
+# Author-year citations typed as plain text. A surname may carry a particle (van, de) and
+# hyphens or apostrophes; a group is "A", "A and B", "A, B and C" or "A et al.".
+_NAME = r"(?:(?:van|von|de|der|den|du|da|di|del|le|la|ter)\s+)*[A-Z][^\W\d_][\w'\u2019-]*"
+_AUTHORS = rf"(?<![\w'\u2019-]){_NAME}(?:\s*,\s*{_NAME})*(?:,?\s+(?:and|&)\s+{_NAME})?(?:\s+et\s+al\.?)?"
+_YEAR = r"(?:1[5-9]|20)\d\d[a-z]?"
+NARRATIVE_CITE = re.compile(rf"({_AUTHORS})\s*\(\s*({_YEAR}(?:\s*[,;]\s*{_YEAR})*)\s*\)")
+PAREN_CITE = re.compile(rf"\(((?:[^()]*?\b{_YEAR}\b[^()]*?))\)")
+CITE_IN_PAREN = re.compile(rf"({_AUTHORS}),?\s+({_YEAR}(?:\s*,\s*{_YEAR})*)")
+# Cross-references typed by hand, with lists and ranges: "Sections 2-5", "Theorems 2.1 and 2.3".
+_TARGET = r"(?:[A-Z]?\d+(?:\.\d+)*[a-z]?|[A-Z](?:\.\d+)*|[IVX]+)\b"
+HAND_REF = re.compile(
+    r"\b(?:[Ss]ections?|[Aa]ppendi(?:x|ces)|[Tt]heorems?|[Ll]emmas?|[Pp]ropositions?|[Cc]orollar(?:y|ies)|"
+    r"[Cc]onjectures?|[Dd]efinitions?|[Rr]emarks?|[Ee]xamples?|[Cc]ounterexamples?|[Tt]ables?|[Ff]igures?|"
+    r"Figs?\.|[Aa]lgorithms?|[Ee]quations?|Eqs?\.|[Qq]uestions?|[Pp]ropert(?:y|ies)|[Cc]hapters?|[Pp]arts?|Steps?)"
+    rf"\s+{_TARGET}(?:\s*(?:,|and|or|to|-|\u2013|\u2014)\s*{_TARGET})*")
+
+
+def author_year(text):
+    """Author-year citations as (normalised item, span) pairs, one item per author-year pair."""
+    found = []
+    def norm(authors, years):
+        a = re.sub(r"\s+", " ", authors.replace("&", "and")).strip().rstrip(",")
+        a = re.sub(r"\s+et al\.?$", " et al.", a)
+        return [f"{a} {y}" for y in re.split(r"\s*[,;]\s*", years)]
+    taken = []
+    for m in NARRATIVE_CITE.finditer(text):
+        found += norm(m.group(1), m.group(2))
+        taken.append(m.span())
+    for m in PAREN_CITE.finditer(text):
+        if any(a <= m.start() < b for a, b in taken):
+            continue
+        hits = list(CITE_IN_PAREN.finditer(m.group(1)))
+        if hits:
+            for h in hits:
+                found += norm(h.group(1), h.group(2))
+            taken.append(m.span())
+    return found, taken
+
+
+def cut(text, spans):
+    for a, b in sorted(spans, reverse=True):
+        text = text[:a] + " " + text[b:]
+    return text
 
 
 def strip_comments(text, fmt):
@@ -72,6 +120,15 @@ def extract(text, fmt):
     for m in re.finditer(r"(?<![\w@.])@([A-Za-z0-9_][\w:.#$%&+?<>~/-]*\w)", rest):
         items["citations"][m.group(1)] += 1
     rest = re.sub(r"(?<![\w@.])@[A-Za-z0-9_][\w:.#$%&+?<>~/-]*\w", " ", rest)
+    # author-year citations and hand-typed cross-references, which hold numbers of their own
+    cites, spans = author_year(rest)
+    for c in cites:
+        items["citations"][c] += 1
+    rest = cut(rest, spans)
+    for m in HAND_REF.finditer(rest):
+        ref = re.sub(r"\s*[\u2013\u2014]\s*", "-", re.sub(r"\s+", " ", m.group(0)))
+        items["references"][ref] += 1
+    rest = HAND_REF.sub(" ", rest)
     # numbers outside maths, with an attached unit or percent sign
     for m in re.finditer(r"(?<![\w.])[-−]?\d[\d,]*(?:\.\d+)?(?:[eE×x]\s?10\^?[-−]?\d+)?\s?(?:%|‰)?", rest):
         items["numbers"][m.group(0).replace(" ", "")] += 1

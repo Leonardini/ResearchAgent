@@ -34,7 +34,9 @@ These come before everything else.
    reference commands are copied verbatim. Prose around them may change.
 
 `scripts/check_preservation.py` checks contract items 1 and 4 mechanically. Run it on every
-rewrite.
+rewrite. It also covers papers that cite author-year in plain text ("Smith and Jones (2009)",
+"(Smith 2009; Jones et al. 2013)") and number their cross-references by hand ("Section 3.4",
+"Theorems 2.1 and 2.3"): each counts as an item that must survive unchanged.
 
 ## Method
 

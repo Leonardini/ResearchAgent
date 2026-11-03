@@ -74,3 +74,11 @@ His comments in `scientific-humanizer-workspace/iteration-2/feedback.json`, and 
     call.
   The jargon pass now flags coined names at first use ("a pinning result") and terms used in
   tables and captions.
+
+## Author-year citations (2026-11-03)
+
+His words: "Let's fix the author-year citations please". check_preservation.py found 0 citations and
+0 references in both Kemeny MSS papers (plain-text author-year, hand-typed "Section 3.4"). It now
+extracts author-year pairs ("Shepardson and Tovey 2009", "Eggermont et al. 2013a") and hand-typed
+cross-references: 119 + 242 and 72 + 240 items in the two papers; both humanizer edits still pass;
+a changed year and a changed section number are both caught (negative control).
