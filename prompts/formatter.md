@@ -80,3 +80,54 @@ His comments in `formatter-workspace/iteration-1/feedback.json`, and what change
 - **Six false long-paragraph findings.** This layout has no space between paragraphs, and
   the script took run-together paragraphs for single long ones (found by the BME run on
   2026-10-27).
+
+## Request, 2026-11-03: everything by label
+
+His words: "please add a pointer/requirement to the /formatter skill: every section, subsection,
+figure, table and reference needs to be done by label, so that reordering is trivial and
+automatic; and also add a note to that effect to the global CLAUDE.md file, the section about
+writing conventions; and finally, do that in this paper before any reordering takes place."
+(Prompted by a planned reordering of the BME paper's sections and appendices.)
+
+Applied: a "fix"-level row in SKILL.md's table, a "Labels before reordering" note (conversion
+comes before any restructuring; use the paper's own mechanism or propose one; equation numbers
+in parentheses are searched by hand), and `check_hardcoded_refs` in formatter.py, which
+reports hand-numbered references per kind and headings that carry numbers. On the BME paper
+(2026-11-03) it found 122 section, 78 table, 37 appendix, 27 theorem, 15 lemma, 16 proposition,
+7 algorithm, 5 conjecture and 3 figure references, and 51 numbered headings.
+
+## Fixes after the Kemeny MSS runs (2026-11-03)
+
+His words: "Let's fix the four issues in the formatter now" (the four: the author's build, the
+roadmap false positive, paragraphs merged under parskip, `p{}` columns reported as wrapped rows).
+- **Author's build.** A Markdown draft is compiled from the author's generated `.tex`
+  (`<draft>.tex` if not older than the draft, or `--tex`), not a default pandoc build: the Kemeny
+  papers are 31 pages with build_mss.py and 43-46 with pandoc defaults. The build used is printed
+  and written to report.md; a stale or missing .tex is warned about, naming any build script.
+  The engine is pdflatex unless a magic comment or an unconditional fontspec says otherwise.
+- **Roadmap.** The title written as a `#` heading (the first heading, alone at its level or
+  followed by the abstract) and front matter (Abstract, Highlights, Keywords) are no longer taken
+  for the first section.
+- **Paragraphs.** A PDF row starting with the first four words of a source paragraph starts a new
+  paragraph; in justified text a short row ending a sentence does too. (Under parskip the gap
+  between paragraphs, 15 pt in paper 1, was smaller than one inside a paragraph raised by inline
+  primes, 16 pt, so no layout cue alone separates them.) Lettered captions ("Figure A.1:") are
+  recognised as captions.
+- **Wrapped rows.** Reported only when a fixed-width cell's first and last words land on different
+  table rows of the PDF; prose quoting the cell and tables whose rows start alike no longer match.
+  Results: paper 1 wrapped rows 5 -> 0, long paragraphs 7 -> 5 (the false 20-line one gone),
+  roadmap 1 -> 0; paper 2 wrapped rows 8 -> 0, roadmap 1 -> 0. Positive control: a wrapping
+  `p{}` cell is still found, a fixed-width table that does not wrap is not.
+- Also: report.md no longer cuts the review JSON part-way (points to issues.json when too long).
+- **Identifiers (his words: "Formatter's doi and orcid should be allowed as exact numbers").**
+  DOIs, ORCIDs, arXiv numbers, ISBNs and numbers inside web addresses are skipped by the
+  significant-figures check (paper 1: 69 -> 35 findings, all now genuine counts).
+- **Author-year citations ("Let's fix the author-year citations please").** For an author-year
+  reference list, every entry must be cited (surname and year in the text, appendices after the
+  list included; an entry named without its year is reported as such) and every citation must
+  have an entry (dash-joined names, hyphenated surnames, possessives handled). Both Kemeny papers:
+  0 findings, as the Referencer found; negative control (an entry deleted, a fake one added): both
+  flagged.
+- **Short words ("Let's not flag really short words in the formatter").** The -ise/-ize check needs
+  at least three letters before -is-/-iz-, so "rising", "arise", "size", "seize" are not spelling
+  variants; "organise", "realized", "minimisation" still are.

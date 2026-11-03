@@ -1,6 +1,6 @@
 ---
 name: formatter
-description: Check and fix the layout and structure of a scientific manuscript (pandoc Markdown or LaTeX) against the author's formatting conventions. It compiles a private copy and finds tables split across pages, large empty spaces, paragraphs over about 12 lines, short dangling last lines worth trimming, wrapped table rows, overfull or inconsistent mathematics, uncited references, tables and figures, citation numbers out of order, numbers with more than 5 significant figures, terms used before they are defined, untitled sections, missing section openings and closings, and a missing or incomplete "The rest of this paper is organised as follows" paragraph. Layout problems are fixed mechanically, wording changes are proposed, and everything is marked on an annotated PDF. Use this whenever the user asks to format, typeset-check, polish the layout of, tighten, shorten, or prepare a paper for submission, mentions page breaks, floats, overfull boxes, widows or orphans, citation order or numbering, the roadmap paragraph or section transitions, or asks whether a manuscript follows their conventions.
+description: Check and fix the layout and structure of a scientific manuscript (pandoc Markdown or LaTeX) against the author's formatting conventions. It compiles a private copy and finds tables split across pages, large empty spaces, paragraphs over about 12 lines, short dangling last lines worth trimming, wrapped table rows, overfull or inconsistent mathematics, uncited references, tables and figures, cross-references and headings numbered by hand instead of by label, citation numbers out of order, numbers with more than 5 significant figures, terms used before they are defined, untitled sections, missing section openings and closings, and a missing or incomplete "The rest of this paper is organised as follows" paragraph. Layout problems are fixed mechanically, wording changes are proposed, and everything is marked on an annotated PDF. Use this whenever the user asks to format, typeset-check, polish the layout of, tighten, shorten, or prepare a paper for submission, mentions page breaks, floats, cross-references, labels, renumbering or reordering sections or appendices, overfull boxes, widows or orphans, citation order or numbering, the roadmap paragraph or section transitions, or asks whether a manuscript follows their conventions.
 ---
 
 # Formatter
@@ -24,8 +24,9 @@ if the user seems to expect them here.
 | No large empty areas | script (PDF) | fix |
 | Table rows never wrap | script (TeX column types) | fix |
 | Mathematics renders consistently: nothing sticks into the margin, no Unicode maths in prose, no raw markup in the PDF, one notation per object | script + agent | fix / propose / review |
-| Every reference cited; numbers increase in order of first citation and inside each bracket; references carry topic symbols and a legend | script (PDF) | fix / propose / review |
+| Every reference cited; numbers increase in order of first citation and inside each bracket; references carry topic symbols and a legend. Author-year papers: every entry cited, every citation has an entry | script (PDF; author-year from the source) | fix / propose / review |
 | Every table and figure referred to in the text | script (PDF) | propose |
+| Every section, subsection, appendix, figure, table, theorem-like statement, algorithm, numbered equation and reference is cited by label, never by a hand-written number, and headings carry no hand-written numbers | script (source) | fix |
 | At most 5 significant figures; large numbers exact only when exactness matters | script finds, agent judges | propose |
 | No paragraph over about 12 lines (13-14 lines only if it holds more than one idea) | script (PDF) | propose / review |
 | Short last lines flagged as places to trim a few words (paragraphs of 5+ lines, outside algorithms and displays) | script (PDF) | propose |
@@ -34,6 +35,15 @@ if the user seems to expect them here.
 | Each section opens with 1-2 sentences on what it does and closes with 1-2 leading into the next | script finds gaps, agent judges | propose |
 | The first section ends with "The rest of this paper is organised as follows", naming every section and appendix (required when the paper is mathematical) | script | propose |
 | Experimental setup in its own section, experiment subsection titles state their conclusion, results tables in an appendix with a narrative main text | agent, using the headings list | review |
+
+**Labels before reordering.** Cross-references by label are what make moving a section,
+appendix or table trivial: the build renumbers everything and no reference goes stale. So
+when a paper numbers by hand, converting it to labels comes before any restructuring, and a
+request to reorder sections or appendices starts with this conversion. For pandoc Markdown,
+use the paper's existing mechanism if it has one (pandoc-crossref, a Lua filter); otherwise
+propose one before converting, since the choice affects the author's build. References are
+already by key under citeproc. The script does not see bare parenthesised equation numbers
+such as "(4)–(9)": search for those by hand.
 
 **fix** = mechanical: apply it, then re-check. **propose** = changes wording or content: write
 the exact suggested text, do not apply it. **review** = needs the author's judgement.
@@ -51,6 +61,16 @@ pandoc's defaults file taken from the folder's Makefile when there is one. It ne
 author's own build and never touches their PDF. It writes `issues.json`, `report.md` and
 `annotated.pdf`. It needs pandoc, latexmk and PyMuPDF. If the compilation fails, report the
 LaTeX error and stop: do not edit the paper to make it compile unless asked.
+
+**Check the pages the author actually produces.** Many Markdown papers are built by their own
+script (a custom preamble, margins, floats), and a default pandoc build can differ by a dozen
+pages, which makes every page, gap and overfull finding wrong. So the script compiles the
+`.tex` the author's build produced: `<draft>.tex` beside the draft when it is at least as new
+as the draft, or the file given with `--tex`. The source checks still read the Markdown. The
+first line of the output, and of `report.md`, says which build was used. If it warns that the
+`.tex` is stale or missing and names a build script, run the author's build (into a scratch
+copy if it writes beside the draft) and pass its `.tex` with `--tex`. If the page count still
+differs from the author's PDF, say so before reporting any layout finding.
 
 Read `report.md` in full. Some findings are false positives: a "short last line" that is the
 end of a list item, an "acronym" that is a product name (CPLEX, MOSEK) or a standard symbol.
