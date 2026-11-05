@@ -143,3 +143,7 @@ roadmap false positive, paragraphs merged under parskip, `p{}` columns reported 
   need either cutting or a separate paragraph, I prefer the former").** The roadmap check now requires the
   sections only, and a roadmap that lists appendices gets a proposed cut. Controls: the BME roadmap before
   the cut is flagged (10 appendix mentions), after it is not.
+- **Long paragraph across a page (2026-11-05, his words: "On p.7 there is an insanely long paragraph, this
+  should have been flagged by the formatter").** It was found (27 lines) but reported and highlighted on
+  page 6, where only its first 2 lines are. A long paragraph is now marked on the page holding most of its
+  lines, and the message names every page it covers ("pages 6–7").

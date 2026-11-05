@@ -724,14 +724,21 @@ def check_paragraphs(layout, max_lines, hard_max_lines, min_trim_lines):
         pno, first = para[0]
         if any(ALGO_LINE.match(r["text"].strip()) for _, r in para):
             continue
+        # A paragraph that crosses a page is marked on the page holding most of its lines, and
+        # the message names every page it covers: marking only the first page hid a 27-line
+        # paragraph whose first 2 lines ended page 6 and whose other 25 filled page 7.
+        pages = sorted({p for p, _ in para})
+        main = Counter(p for p, _ in para).most_common(1)[0][0]
+        where = f"page {pages[0] + 1}" if len(pages) == 1 else f"pages {pages[0] + 1}–{pages[-1] + 1}"
         if n >= hard_max_lines:
             found.append(issue("long-paragraph", "propose",
-                               f"Paragraph of {n} lines (limit about {max_lines}): split it where the topic shifts. "
-                               f"Starts: \"{first['text'][:70]}…\"", page=pno + 1, rect=_span_rect(para)))
+                               f"Paragraph of {n} lines on {where} (limit about {max_lines}): split it where the topic "
+                               f"shifts. Starts: \"{first['text'][:70]}…\"", page=main + 1, rect=_span_rect(para, main)))
         elif n > max_lines:
             found.append(issue("long-paragraph", "review",
-                               f"Paragraph of {n} lines (limit about {max_lines}): split it only if it holds more than "
-                               f"one idea. Starts: \"{first['text'][:70]}…\"", page=pno + 1, rect=_span_rect(para)))
+                               f"Paragraph of {n} lines on {where} (limit about {max_lines}): split it only if it holds "
+                               f"more than one idea. Starts: \"{first['text'][:70]}…\"", page=main + 1,
+                               rect=_span_rect(para, main)))
         lpno, last = para[-1]
         if n >= min_trim_lines and last["bbox"][2] - last["bbox"][0] < 0.2 * layout.width and len(last["text"]) < 40 \
                 and not last.get("before_display") and SENTENCE_END.search(last["text"].strip()):
@@ -742,8 +749,9 @@ def check_paragraphs(layout, max_lines, hard_max_lines, min_trim_lines):
     return found
 
 
-def _span_rect(para):
-    pno = para[0][0]
+def _span_rect(para, pno=None):
+    """The box around the paragraph's lines on page pno (default: its first page)."""
+    pno = para[0][0] if pno is None else pno
     rows = [r for p, r in para if p == pno]
     return [min(r["bbox"][0] for r in rows), min(r["bbox"][1] for r in rows),
             max(r["bbox"][2] for r in rows), max(r["bbox"][3] for r in rows)]
