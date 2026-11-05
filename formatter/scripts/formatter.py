@@ -34,7 +34,7 @@ UNICODE_MATHS = set("≤≥≠≈≡×÷±∓∑∏∫∈∉⊂⊆⊃⊇∪∩�
 ACRONYM_ALLOW = {"NP", "PDF", "CPU", "GPU", "RAM", "URL", "DOI", "ID", "OK", "UK", "USA", "EU", "AI", "API",
                  "GB", "MB", "TB", "KB", "GHz", "IBM", "IEEE", "ISO", "ASCII", "HTML", "JSON", "CSV", "OS",
                  "II", "III", "IV", "VI", "VII", "VIII", "IX", "XI", "XII"}
-BACK_MATTER = re.compile(r"acknowledg|funding|declaration|competing|author contributions|data availability|references|bibliography", re.I)
+BACK_MATTER = re.compile(r"acknowledg|funding|declaration|competing|author contributions|credit authorship|data availability|references|bibliography", re.I)
 ROADMAP = re.compile(r"rest of (?:this|the) (?:paper|article|manuscript) is organi[sz]ed as follows", re.I)
 
 
@@ -216,6 +216,40 @@ def check_headings(ast):
             found.append(issue("transitions", "propose",
                                f"'{title}' goes straight into its first subsection: add 1-2 sentences saying what this section does.",
                                find=title, section=title))
+    return found
+
+
+EXEMPT_FLAT = re.compile(r"\b(introduction|conclusions?|discussion|concluding remarks|summary|outlook)\b", re.I)
+
+
+def check_flat_sections(ast):
+    """A main-text section with no subsections is a flag: it usually means an idea that belongs
+    inside another section (his words, 2026-11-05: short sections "reflect poor organisation of
+    the ideas"). Exempt: the introduction and the conclusion or discussion; front and back
+    matter; unnumbered sections; and everything from the first appendix or the reference list
+    on."""
+    heads = [b for b in ast["blocks"] if b["t"] == "Header"]
+    levels = sorted({h["c"][0] for h in heads})
+    if len(levels) < 2:
+        return []
+    section_level = levels[1] if len(levels) > 2 else levels[0]
+    found = []
+    for i, h in enumerate(heads):
+        level, (_, classes, _) = h["c"][0], h["c"][1]
+        title = strip_numbering(header_title(h))
+        if "appendix" in classes or re.match(r"(Appendix|Appendices)\b", header_title(h)) \
+                or title.lower() in ("references", "bibliography"):
+            break
+        if level != section_level or "unnumbered" in classes or front_matter(h, ast) \
+                or EXEMPT_FLAT.search(title) or BACK_MATTER.search(title):
+            continue
+        nxt = next((g for g in heads[i + 1:] if g["c"][0] <= level or g["c"][0] == level + 1), None)
+        if nxt is None or nxt["c"][0] <= level:
+            found.append(issue("flat-section", "propose",
+                               f"Section '{title}' has no subsections. Outside the introduction and the "
+                               "conclusion, a section without subsections usually means its idea belongs "
+                               "inside another section: fold it into the section it serves, or give it the "
+                               "subsections its content needs.", find=title[:60], section=header_title(h)))
     return found
 
 
@@ -1238,6 +1272,7 @@ def cmd_check(args):
     issues = []
     issues += check_headings(ast)
     issues += check_subsection_titles(ast, layout)
+    issues += check_flat_sections(ast)
     road_issue, road = check_roadmap(ast)
     issues += road_issue
     if road:

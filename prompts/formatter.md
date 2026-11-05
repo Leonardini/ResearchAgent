@@ -147,3 +147,11 @@ roadmap false positive, paragraphs merged under parskip, `p{}` columns reported 
   should have been flagged by the formatter").** It was found (27 lines) but reported and highlighted on
   page 6, where only its first 2 lines are. A long paragraph is now marked on the page holding most of its
   lines, and the message names every page it covers ("pages 6–7").
+- **Sections without subsections (2026-11-05, his words: "In general, I don't want short sections (with no
+  subsections), except the intro and the conclusion/discussion, as that reflects poor organisation of the
+  ideas - please add a note to the formatter").** New check `flat-section`: a main-text section with no
+  subsections is a proposed change, except the introduction, the conclusion or discussion, front and back
+  matter (declarations, funding, CRediT, data availability, acknowledgements), unnumbered sections and
+  everything from the first appendix or the reference list on. Prompted by folding the BME paper's
+  "From the formulation to a solver" into its introduction and solver description. Results: BME 1 (the
+  cut-value ladder section), Kemeny paper 1 6 (sections 2-6 and 9), Kemeny paper 2 0.
