@@ -34,7 +34,7 @@ if the user seems to expect them here.
 | Every section and subsection has a title (a section's opening text before its first subsection needs none) | script | propose |
 | A subsection title fits on one line and makes one point: a title that wraps, or that joins two claims with "and" ("X certifies … and is slower"), means the subsection should be split | script (wrapping, PDF; candidate "and"s, source) + agent judges | propose / review |
 | Each section opens with 1-2 sentences on what it does and closes with 1-2 leading into the next | script finds gaps, agent judges | propose |
-| The first section ends with "The rest of this paper is organised as follows", naming every section and appendix (required when the paper is mathematical) | script | propose |
+| The first section ends with "The rest of this paper is organised as follows", naming every section, and not the appendices (required when the paper is mathematical) | script | propose |
 | Experimental setup in its own section, experiment subsection titles state their conclusion, results tables in an appendix with a narrative main text | agent, using the headings list | review |
 
 **Labels before reordering.** Cross-references by label are what make moving a section,
@@ -161,8 +161,10 @@ theoretical results imply" cut to "the theory imply" is wrong; "the theory impli
   connection explicit. A closing sentence that names the next section's question is a
   transition, not foreshadowing: it states no result. Propose a sentence for each one missing,
   drawn from the actual content of the two sections. Mark it as a draft for the author.
-- **Roadmap paragraph**: if missing, draft it from the headings (every section and appendix,
-  each with what it does). If present, list the sections and appendices it leaves out.
+- **Roadmap paragraph**: if missing, draft it from the headings (every section, each with what
+  it does). If present, list the sections it leaves out. It does not list the appendices: the
+  author prefers cutting them from the roadmap to giving them a paragraph of their own, since
+  each appendix is reached from the text that uses it. If the roadmap lists them, propose the cut.
 - **Untitled section or subsection**: propose a title that states the content. For an
   experiment subsection, the title states the conclusion ("The minimum-cut family carries most
   of the root bound"), not the topic.

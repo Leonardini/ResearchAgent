@@ -335,25 +335,33 @@ def check_roadmap(ast):
 
 
 def roadmap_coverage(ast, road):
-    """Sections and appendices the roadmap paragraph does not mention."""
+    """Sections the roadmap paragraph does not mention. Appendices are left out of the roadmap
+    (the author's preference, 2026-11-05: listing them makes the paragraph too long), so they
+    are not required; check_roadmap_appendices flags a roadmap that lists them."""
     missing = []
     for h in [b for b in ast["blocks"] if b["t"] == "Header"]:
         title = header_title(h)
-        m = re.match(r"^(\d+)\.\s", title) or re.match(r"^Appendix\s+([A-Z])\b", title)
+        m = re.match(r"^(\d+)\.\s", title)
         if not m:
             continue
         num = m.group(1)
-        if num.isdigit():
-            pats = [rf"\bSections?\s+(?:\d+\s*(?:,|and|–|-)\s*)*{num}\b", rf"\bSections?\s+\d+\s*[–-]\s*\d+"]
-            ok = re.search(pats[0], road)
-            if not ok:
-                for m2 in re.finditer(r"\bSections?\s+(\d+)\s*[–-]\s*(\d+)", road):
-                    ok = ok or int(m2.group(1)) <= int(num) <= int(m2.group(2))
-        else:
-            ok = re.search(rf"\bAppendi(?:x|ces)\s+(?:[A-Z]\s*(?:,|and|–|-)\s*)*{num}\b", road)
+        ok = re.search(rf"\bSections?\s+(?:\d+\s*(?:,|and|–|-)\s*)*{num}\b", road)
+        if not ok:
+            for m2 in re.finditer(r"\bSections?\s+(\d+)\s*[–-]\s*(\d+)", road):
+                ok = ok or int(m2.group(1)) <= int(num) <= int(m2.group(2))
         if not ok and strip_numbering(title).lower() not in ("introduction",):
             missing.append(title)
     return missing
+
+
+def check_roadmap_appendices(road):
+    """The roadmap names the sections only; a list of appendices is proposed for cutting."""
+    n = len(re.findall(r"\bAppendi(?:x|ces)\b", road))
+    if n == 0:
+        return []
+    return [issue("roadmap", "propose", f"The roadmap paragraph lists appendices ({n} mention(s)). Cut them: "
+                  "the roadmap names the sections only, and each appendix is reached from the text that uses it.",
+                  find="rest of this paper is organised")]
 
 
 def check_numbers(ast):
@@ -1229,6 +1237,7 @@ def cmd_check(args):
         if missing:
             issues.append(issue("roadmap", "propose", "The roadmap paragraph does not mention: " + "; ".join(missing),
                                 find="rest of this paper is organised"))
+        issues += check_roadmap_appendices(road)
     issues += check_numbers(ast)
     issues += check_hardcoded_refs(ast)
     issues += check_unicode_maths(ast)

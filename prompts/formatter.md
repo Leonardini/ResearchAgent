@@ -139,3 +139,7 @@ roadmap false positive, paragraphs merged under parskip, `p{}` columns reported 
   agent to judge whether it joins two claims (split) or nouns (fine). Top-level sections are exempt (journals fix
   some, e.g. "Declaration of competing interest"). BME paper: 2 wrapping titles (both two-claim titles), 8 "and"
   candidates, of which those 2 join claims; the earlier 3 false wraps from shared first words are gone.
+- **Roadmap without appendices (2026-11-05, his words: "The appendices in 'the rest is organised as follows'
+  need either cutting or a separate paragraph, I prefer the former").** The roadmap check now requires the
+  sections only, and a roadmap that lists appendices gets a proposed cut. Controls: the BME roadmap before
+  the cut is flagged (10 appendix mentions), after it is not.
