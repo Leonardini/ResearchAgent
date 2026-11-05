@@ -219,6 +219,62 @@ def check_headings(ast):
     return found
 
 
+def subsection_titles(ast):
+    """(title, heading) for every subsection: a heading below the section level. The section
+    level is the shallowest heading level, or the next one when the draft also has parts (three
+    or more levels). Front and back matter (Abstract, References...) are not subsections."""
+    heads = [b for b in ast["blocks"] if b["t"] == "Header"]
+    levels = sorted({h["c"][0] for h in heads})
+    if not levels:
+        return []
+    section_level = levels[1] if len(levels) > 2 else levels[0]
+    return [(header_title(h), h) for h in heads if h["c"][0] > section_level]
+
+
+AND_JOIN = re.compile(r"\band\b|,\s*(?:but|while|whereas)\b", re.I)
+
+
+def check_subsection_titles(ast, layout):
+    """A subsection title fits on one line and makes one point. Two checks:
+    - it wraps onto a second line in the compiled PDF ("going over one line is a flag");
+    - it contains "and" (or ", but"/", while"/", whereas"). When the conjunction joins two
+      claims, each with its own verb ("X certifies ... and is mostly slower"), the subsection is
+      really two and should be split; when it joins nouns ("Trees, splits and tree metrics",
+      "NJ and FastME miss ...") it is fine. The script cannot tell the two apart, so it lists
+      every candidate for the agent to judge."""
+    def words(text):  # letters-only words, so maths renders the same in the source and the PDF
+        return [w.lower() for w in re.findall(r"[^\W\d_]{2,}", unicodedata.normalize("NFKC", text))]
+
+    found = []
+    for title, _ in subsection_titles(ast):
+        plain = strip_numbering(title)
+        if AND_JOIN.search(plain):
+            found.append(issue("subsection-titles", "review",
+                               f"Subsection title '{plain}' contains '{AND_JOIN.search(plain).group(0).strip(', ')}'. "
+                               "If it joins two claims (each with its own verb), split the subsection into two, "
+                               "one claim per title; a list of nouns is fine.", find=plain[:60], section=title))
+        tw = words(plain)
+        if len(tw) < 2:
+            continue
+        # The title wraps when a heading row holds a proper prefix of its words and the row
+        # just below holds the words that come next.
+        for pno, p in enumerate(layout.pages):
+            rows = [r for r in p["rows"] if r["kind"] != "footer"]
+            for i, r in enumerate(rows[:-1]):
+                rw, nxt = words(strip_numbering(r["text"])), rows[i + 1]
+                if r["kind"] != "heading" or not rw or len(rw) >= len(tw) or tw[:len(rw)] != rw:
+                    continue
+                nw = words(nxt["text"])
+                if nxt["kind"] == "heading" and nw and tw[len(rw):len(rw) + len(nw)] == nw \
+                        and nxt["bbox"][1] - r["bbox"][3] < r["size"]:
+                    found.append(issue("subsection-titles", "propose",
+                                       f"Subsection title '{plain}' runs over one line in the PDF. Shorten it to "
+                                       "one line, or split the subsection if the title states two things.",
+                                       page=pno + 1, rect=[r["bbox"][0], r["bbox"][1], nxt["bbox"][2], nxt["bbox"][3]],
+                                       section=title))
+    return found
+
+
 def section_ends(ast):
     """For each section that has subsections or prose: its first and last sentence, so the agent
     can judge the opening and closing transitions."""
@@ -1165,6 +1221,7 @@ def cmd_check(args):
     layout.para_starts = paragraph_starts(ast)
     issues = []
     issues += check_headings(ast)
+    issues += check_subsection_titles(ast, layout)
     road_issue, road = check_roadmap(ast)
     issues += road_issue
     if road:

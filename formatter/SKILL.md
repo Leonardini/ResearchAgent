@@ -1,6 +1,6 @@
 ---
 name: formatter
-description: Check and fix the layout and structure of a scientific manuscript (pandoc Markdown or LaTeX) against the author's formatting conventions. It compiles a private copy and finds tables split across pages, large empty spaces, paragraphs over about 12 lines, short dangling last lines worth trimming, wrapped table rows, overfull or inconsistent mathematics, uncited references, tables and figures, cross-references and headings numbered by hand instead of by label, citation numbers out of order, numbers with more than 5 significant figures, terms used before they are defined, untitled sections, missing section openings and closings, and a missing or incomplete "The rest of this paper is organised as follows" paragraph. Layout problems are fixed mechanically, wording changes are proposed, and everything is marked on an annotated PDF. Use this whenever the user asks to format, typeset-check, polish the layout of, tighten, shorten, or prepare a paper for submission, mentions page breaks, floats, cross-references, labels, renumbering or reordering sections or appendices, overfull boxes, widows or orphans, citation order or numbering, the roadmap paragraph or section transitions, or asks whether a manuscript follows their conventions.
+description: Check and fix the layout and structure of a scientific manuscript (pandoc Markdown or LaTeX) against the author's formatting conventions. It compiles a private copy and finds tables split across pages, large empty spaces, paragraphs over about 12 lines, short dangling last lines worth trimming, wrapped table rows, overfull or inconsistent mathematics, uncited references, tables and figures, cross-references and headings numbered by hand instead of by label, citation numbers out of order, numbers with more than 5 significant figures, terms used before they are defined, untitled sections, subsection titles that wrap or join two claims with "and", missing section openings and closings, and a missing or incomplete "The rest of this paper is organised as follows" paragraph. Layout problems are fixed mechanically, wording changes are proposed, and everything is marked on an annotated PDF. Use this whenever the user asks to format, typeset-check, polish the layout of, tighten, shorten, or prepare a paper for submission, mentions page breaks, floats, cross-references, labels, renumbering or reordering sections or appendices, overfull boxes, widows or orphans, citation order or numbering, the roadmap paragraph or section transitions, or asks whether a manuscript follows their conventions.
 ---
 
 # Formatter
@@ -32,6 +32,7 @@ if the user seems to expect them here.
 | Short last lines flagged as places to trim a few words (paragraphs of 5+ lines, outside algorithms and displays) | script (PDF) | propose |
 | Every term defined before first use (the abstract is exempt) | script (acronyms) + agent (all terms) | propose / review |
 | Every section and subsection has a title (a section's opening text before its first subsection needs none) | script | propose |
+| A subsection title fits on one line and makes one point: a title that wraps, or that joins two claims with "and" ("X certifies … and is slower"), means the subsection should be split | script (wrapping, PDF; candidate "and"s, source) + agent judges | propose / review |
 | Each section opens with 1-2 sentences on what it does and closes with 1-2 leading into the next | script finds gaps, agent judges | propose |
 | The first section ends with "The rest of this paper is organised as follows", naming every section and appendix (required when the paper is mathematical) | script | propose |
 | Experimental setup in its own section, experiment subsection titles state their conclusion, results tables in an appendix with a narrative main text | agent, using the headings list | review |
@@ -165,6 +166,15 @@ theoretical results imply" cut to "the theory imply" is wrong; "the theory impli
 - **Untitled section or subsection**: propose a title that states the content. For an
   experiment subsection, the title states the conclusion ("The minimum-cut family carries most
   of the root bound"), not the topic.
+- **Subsection titles** (`subsection-titles`): a subsection title that runs over one line, or
+  that joins two claims with "and" (each side with its own verb: "The compact solver certifies
+  every instance … and is mostly slower than …"), covers two things, so propose splitting the
+  subsection in two, one claim per title, and say where the text divides. The script lists every
+  subsection title containing "and" (or ", but", ", while", ", whereas"); dismiss the ones where
+  it joins nouns ("Trees, splits and tree metrics", "NJ and FastME miss the optimal tree"). A
+  title that wraps but states one claim is shortened instead. This applies to subsections, not to
+  top-level sections, whose titles a journal sometimes fixes ("Declaration of competing
+  interest").
 - **Uncited table or figure**: propose the sentence where it should be referred to.
 - **Uncited reference**: cite it where it belongs, or remove it from the bibliography.
 

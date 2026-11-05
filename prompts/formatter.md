@@ -131,3 +131,11 @@ roadmap false positive, paragraphs merged under parskip, `p{}` columns reported 
 - **Short words ("Let's not flag really short words in the formatter").** The -ise/-ize check needs
   at least three letters before -is-/-iz-, so "rising", "arise", "size", "seize" are not spelling
   variants; "organise", "realized", "minimisation" still are.
+- **Subsection titles (2026-11-05, his words: "For subsection names: going over one line is a flag, as is using
+  'and' such as 'clause 1 AND clause 2' - these should be split into separate subsections; please update the
+  /formatter skill accordingly as well").** New check `subsection-titles`: a subsection title that wraps in the
+  PDF (a heading row holding a prefix of the title's words, the next row holding the words that follow) is a
+  proposed change; every subsection title containing "and" (or ", but"/", while"/", whereas") is listed for the
+  agent to judge whether it joins two claims (split) or nouns (fine). Top-level sections are exempt (journals fix
+  some, e.g. "Declaration of competing interest"). BME paper: 2 wrapping titles (both two-claim titles), 8 "and"
+  candidates, of which those 2 join claims; the earlier 3 false wraps from shared first words are gone.
