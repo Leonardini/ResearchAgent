@@ -175,7 +175,9 @@ theoretical results imply" cut to "the theory imply" is wrong; "the theory impli
   first place the paper introduces the idea (for the high-level point) and the section that
   uses it in detail (for the specifics), as when a short "from the formulation to a solver"
   section was folded into the introduction and the solver's description. If the content does
-  stand on its own, propose the subsections it needs instead.
+  stand on its own, propose the subsections it needs instead. This is a flag, not a rule: a short
+  paper made of genuinely one-off results (a run of separate counterexamples or bounds) can keep
+  flat sections, so say which case the paper looks like and leave the call to the author.
 - **Subsection titles** (`subsection-titles`): a subsection title that runs over one line, or
   that joins two claims with "and" (each side with its own verb: "The compact solver certifies
   every instance … and is mostly slower than …"), covers two things, so propose splitting the

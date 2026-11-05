@@ -155,3 +155,6 @@ roadmap false positive, paragraphs merged under parskip, `p{}` columns reported 
   everything from the first appendix or the reference list on. Prompted by folding the BME paper's
   "From the formulation to a solver" into its introduction and solver description. Results: BME 1 (the
   cut-value ladder section), Kemeny paper 1 6 (sections 2-6 and 9), Kemeny paper 2 0.
+  Follow-up (same day, his words: "Kemeny paper 1 is OK, because a lot of the results are genuinely one-off
+  and the paper is half as long as this one"): the finding stays a flag; SKILL.md now says a short paper of
+  one-off results can keep flat sections, and the agent leaves the call to the author.
