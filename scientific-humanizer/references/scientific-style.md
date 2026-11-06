@@ -201,6 +201,14 @@ manuscript:
   them, but computational results confirming computational results is not only useful, but
   actually good practice."* Flag only an empirical check placed beside a *proof*, and vague
   reassurance that names no check ("we carefully checked all results").
+  **But the confirmation must be independent.** Sanity checks by a second implementation of
+  the authors' own (a self-test, a positive-detection test, the same pipeline rerun a second
+  way) are flagged as reassurance: *"two implementations of our own are more likely to be
+  flawed in the same way, so it's not real reassurance, just sanity checking"* (2026-11-06,
+  on a list of such checks behind an exhaustive screen). Those belong in the reproduction
+  repository, not the paper. The test: would the check catch a flaw shared by the authors'
+  whole pipeline? A different solver, an outside count or a published census can; a rerun of
+  their own code cannot.
 - **Count from 1** (added 2026-11-06): the manuscript numbers things for human readers, so
   indices, positions, labels and ranges start at 1, and $[n]$ means $\{1, \dots, n\}$. Watch for
   0-based ranges carried over from code: a window the code writes as `{0..23}` has 24 elements,
