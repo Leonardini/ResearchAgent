@@ -30,7 +30,7 @@ if the user seems to expect them here.
 | At most 5 significant figures; large numbers exact only when exactness matters | script finds, agent judges | propose |
 | No paragraph over about 12 lines (13-14 lines only if it holds more than one idea) | script (PDF) | propose / review |
 | Short last lines flagged as places to trim a few words (paragraphs of 5+ lines, outside algorithms and displays) | script (PDF) | propose |
-| Every term defined before first use (the abstract is exempt) | script (acronyms) + agent (all terms) | propose / review |
+| Every term defined before first use (front and back matter are exempt: title block, authors and affiliations, abstract, keywords, funding, declarations, acknowledgements, references) | script (acronyms) + agent (all terms) | propose / review |
 | Every section and subsection has a title (a section's opening text before its first subsection needs none) | script | propose |
 | No section without subsections, except the introduction and the conclusion or discussion (back matter and appendices are exempt): a flat section signals ideas that belong elsewhere | script | propose |
 | A subsection title fits on one line and makes one point: a title that wraps, or that joins two claims with "and" ("X certifies … and is slower"), means the subsection should be split | script (wrapping, PDF; candidate "and"s, source) + agent judges | propose / review |
@@ -144,8 +144,8 @@ theoretical results imply" cut to "the theory imply" is wrong; "the theory impli
   check, an identifier) or whether it should be rounded, and give the rounded form
   (12,160,639 → "about 12.2 million"; 802.589 → 802.59). Keep a value exact, and say why,
   when the paper's argument uses its exact value.
-- **Terms used before they are defined**: read the paper in order from the end of the abstract
-  and list every term (not only acronyms) used before its definition: technical terms, symbols
+- **Terms used before they are defined**: read the main text in order from the end of the abstract
+  (front and back matter, such as affiliations, funders and declarations, are exempt) and list every term (not only acronyms) used before its definition: technical terms, symbols
   introduced in prose, the authors' own working labels. For each, point to where it is defined
   (if anywhere) and propose the shortest fix: move the definition up, or add a definition at
   first use. Take the definition's wording from the paper itself; if the paper never defines

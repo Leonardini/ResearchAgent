@@ -533,15 +533,18 @@ def maths_inventory(ast):
 
 
 def check_acronyms(ast):
-    """Acronyms first used (outside the abstract) before any '(ACRONYM)' definition."""
+    """Acronyms first used in the main text before any '(ACRONYM)' definition. Front matter
+    (title block, authors and affiliations, abstract, keywords, highlights) and back matter
+    (funding, declarations, CRediT, acknowledgements, references) are exempt: affiliations
+    (CNRS, MRC), identifiers (ORCID) and funder names are not terms the reader must learn."""
     found, order = [], []
-    in_abstract = [False]
+    # everything before the first heading (title block, authors, affiliations) is front matter
+    in_abstract = [True]
 
     def visit(node):
         if node.get("t") == "Header":
             title = strip_numbering(header_title(node))
-            # the abstract may use undefined terms; back matter (funding, initials) is exempt too
-            in_abstract[0] = title.lower() == "abstract" or bool(BACK_MATTER.search(title))
+            in_abstract[0] = front_matter(node, ast) or bool(BACK_MATTER.search(title))
         if node.get("t") in ("Para", "Plain", "Header"):
             inl = node["c"][2] if node["t"] == "Header" else node["c"]
             text = re.sub(r"\$[^$]*\$", " ", stringify(inl))  # symbols in maths are not acronyms
