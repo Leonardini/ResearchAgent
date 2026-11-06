@@ -194,6 +194,13 @@ manuscript:
   author decides whether that appendix is evidence or reassurance. Keep a check only when it *is* the evidence (a computer-assisted proof's validation,
   support for a conjecture). In particular, a theorem with a proof is not followed by "we also
   verified this empirically": that reads as doubting the proof.
+  **The line is proof vs computation** (his ruling, 2026-11-06): a *computational* result
+  confirmed by a second, independent computation (a second solver, an independent verifier, a
+  different encoding, a count that matches an OEIS value or a published census) stays. That is
+  good practice and part of the evidence, not reassurance: *"mathematical theorems don't need
+  them, but computational results confirming computational results is not only useful, but
+  actually good practice."* Flag only an empirical check placed beside a *proof*, and vague
+  reassurance that names no check ("we carefully checked all results").
 - **Count from 1** (added 2026-11-06): the manuscript numbers things for human readers, so
   indices, positions, labels and ranges start at 1, and $[n]$ means $\{1, \dots, n\}$. Watch for
   0-based ranges carried over from code: a window the code writes as `{0..23}` has 24 elements,
