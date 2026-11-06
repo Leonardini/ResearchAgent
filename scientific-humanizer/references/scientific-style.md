@@ -194,6 +194,14 @@ manuscript:
   author decides whether that appendix is evidence or reassurance. Keep a check only when it *is* the evidence (a computer-assisted proof's validation,
   support for a conjecture). In particular, a theorem with a proof is not followed by "we also
   verified this empirically": that reads as doubting the proof.
+- **Count from 1** (added 2026-11-06): the manuscript numbers things for human readers, so
+  indices, positions, labels and ranges start at 1, and $[n]$ means $\{1, \dots, n\}$. Watch for
+  0-based ranges carried over from code: a window the code writes as `{0..23}` has 24 elements,
+  so it is $[24]$, never $[23]$. Two exceptions keep their own numbering: objects whose
+  elements *are* numbers starting at 0 (residues modulo $q$, field elements of
+  $\mathrm{GF}(q)$, exponents), and quoted code or file contents. An off-by-one changes a
+  stated quantity, so flag it with the evidence (the code or the count it contradicts) rather
+  than editing it silently.
 - **No foreshadowing** (§1) and **define every term before use** (§4).
 - **Numbers**: tables do not wrap; a numerical inequality gets an argument, not a spot check.
   These are content: flag, do not fix.
