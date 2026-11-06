@@ -310,11 +310,19 @@ def check_subsection_titles(ast, layout):
 
 
 def section_ends(ast):
-    """For each section that has subsections or prose: its first and last sentence, so the agent
-    can judge the opening and closing transitions."""
+    """For each main-text section that has subsections or prose: its first and last sentence, so
+    the agent can judge the opening and closing transitions. Appendices and everything after the
+    reference list are left out: only the manuscript's sections must open and close with a
+    transition (his ruling, 2026-11-06)."""
     secs = sections(ast["blocks"])
     out = []
     for i, (h, body) in enumerate(secs):
+        classes = h["c"][1][1]
+        if "appendix" in classes or re.match(r"(Appendix|Appendices)\b", header_title(h)) \
+                or strip_numbering(header_title(h)).lower() in ("references", "bibliography"):
+            break
+        if front_matter(h, ast) or BACK_MATTER.search(strip_numbering(header_title(h))):
+            continue
         paras = [stringify(b["c"]) for b in body if b["t"] in ("Para", "Plain")]
         if not paras:
             continue

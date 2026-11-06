@@ -34,7 +34,7 @@ if the user seems to expect them here.
 | Every section and subsection has a title (a section's opening text before its first subsection needs none) | script | propose |
 | No section without subsections, except the introduction and the conclusion or discussion (back matter and appendices are exempt): a flat section signals ideas that belong elsewhere | script | propose |
 | A subsection title fits on one line and makes one point: a title that wraps, or that joins two claims with "and" ("X certifies … and is slower"), means the subsection should be split | script (wrapping, PDF; candidate "and"s, source) + agent judges | propose / review |
-| Each section opens with 1-2 sentences on what it does and closes with 1-2 leading into the next | script finds gaps, agent judges | propose |
+| Each main-text section opens with 1-2 sentences on what it does and closes with 1-2 leading into the next (appendices and back matter are exempt) | script finds gaps, agent judges | propose |
 | The first section ends with "The rest of this paper is organised as follows", naming every section, and not the appendices (required when the paper is mathematical) | script | propose |
 | Experimental setup in its own section, experiment subsection titles state their conclusion, results tables in an appendix with a narrative main text | agent, using the headings list | review |
 
@@ -157,7 +157,9 @@ theoretical results imply" cut to "the theory imply" is wrong; "the theory impli
   abbreviations of the field need no definition; mention them in one line if the script
   listed them.
 - **Section openings and closings**: `issues.json` → `review_material.section_openings_and_closings`
-  gives each section's first and last sentences. A section must open by saying what it does
+  gives each section's first and last sentences. This applies to the main-text sections only:
+  an appendix need not open or close with a transition, since the text that cites it says why
+  the reader is there, so do not propose one for an appendix. A main-text section must open by saying what it does
   ("In this section we…") and close with a sentence leading into the next, making the
   connection explicit. A closing sentence that names the next section's question is a
   transition, not foreshadowing: it states no result. Propose a sentence for each one missing,
