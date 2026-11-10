@@ -68,7 +68,8 @@
 | `done_regex` | matches the line a run prints when it finishes. Without it a run that has exited is "stopped" and its values stay lower bounds |
 | `stall_minutes` | a running run whose log has not been written for this long is marked **silent** (default 30) |
 | `category_ratio` | a decided difference from fewer than 3 runs a side, by a ratio below this, is marked † (default 10) |
-| `closed` | true hides the family once none of its runs is running |
+| `closed` | true hides the family once none of its runs is running, without the final showing that retirement gives |
+| `last_reported` | written by `report.py`, not by hand: `{"state": <fingerprint>, "at": <ISO time>}` of the final state last shown. While the fingerprint matches, routine reports skip the family. Delete it to show the family again in the next routine report |
 
 ## Measure
 

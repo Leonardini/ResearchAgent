@@ -1,6 +1,6 @@
 ---
 name: experiment-reporter
-description: Report on running computational experiments as a table that sets each run against the settings it is compared with, giving its parameters, the contrast being tested, the measures that answer the question (time, memory, search-tree size, bounds) for this run and the earlier ones, and which is better, marked only once that is decided. Runs are kept in a registry in the project, so each report comes from the processes and logs themselves and not from memory. Use this whenever the user says "please report", "update me", "how are the runs going", "where are we with the experiments" or asks for the status of running jobs, when a report is due at an agreed interval ("report every 30 minutes"), and when launching an experiment or benchmark run that should be compared with earlier settings, so it is registered at launch.
+description: Report on running computational experiments as a table that sets each run against the settings it is compared with, giving its parameters, the contrast being tested, the measures that answer the question (time, memory, search-tree size, bounds) for this run and the earlier ones, and which is better, marked only once that is decided. Runs are kept in a registry in the project, so each report comes from the processes and logs themselves and not from memory. A family whose runs have all ended is shown once in that final state, then retired from routine reports. Use this whenever the user says "please report", "update me", "how are the runs going", "where are we with the experiments" or asks for the status of running jobs, when a report is due at an agreed interval ("report every 30 minutes"), and when launching an experiment or benchmark run that should be compared with earlier settings, so it is registered at launch. Also use it when the user asks to "summarize" or "summarise" experiments ("please summarize the experiments we ran today"), which shows finished and retired families too.
 ---
 
 # Experiment-Reporter
@@ -112,6 +112,33 @@ report). Do not rerun it to fill a table row.
 Keep the table narrow enough not to wrap in a terminal. Use short run ids, and leave out a
 measure that the current question does not need.
 
+### Retired families
+
+A routine report shows a family while any of its runs is running. Once every run has ended,
+the next report shows the family in its final state and records that state, with a
+timestamp, as `last_reported` in the registry. Later reports skip the family and name it on
+one "Retired" line instead. If the final state changes, for example because a stopped run's
+log grows or a run is recorded in the family, the family is shown once more. A run
+registered in a retired family brings it back. A family with `"closed": true` is hidden as
+soon as none of its runs is running, without a final showing. Do not set `closed` to tidy
+the report: retirement already does that, after the user has seen the final state once. Set
+it only when the user asks for a family to be hidden.
+
+## Summarizing experiments
+
+When the user asks to "summarize" or "summarise" experiments, retired and closed families
+are wanted as well. Choose the selection that matches the request:
+
+- "the experiments we ran today": `report.py --since today`. `--since` also takes an ISO date
+  or time, for example `--since 2026-11-09` for "since yesterday";
+- one question: `report.py --family ID`, repeatable;
+- everything: `report.py --all`.
+
+Paste the tables as for a report. Then give each question one or two lines with its answer
+as the marks decide it: the winning setting where the result is ✓, "open" where it is not,
+and † results as "on one run". End with what is still running, if anything. A summary still
+claims nothing the marks do not support.
+
 ## Reporting at an agreed interval
 
 When the user agrees an interval ("report every 30 minutes"):
@@ -143,6 +170,10 @@ last report except elapsed time, say so in one line under the table.
   - a finished run decides;
   - replicates merge;
   - a confound is named;
+  - a family is retired after its final state has been shown once, and shown again if
+    that state changes;
+  - `--all`, `--family` and `--since` show retired families, and an unknown family stops the
+    report;
   - a broken registry stops the report.
   
   Run it after any change to `report.py`.

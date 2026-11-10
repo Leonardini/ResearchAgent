@@ -11,8 +11,8 @@ from pathlib import Path
 REPORT = Path(__file__).resolve().parent / "report.py"
 
 
-def run_report(d):
-    out = subprocess.run([sys.executable, str(REPORT), "--registry", str(d / "registry.json")],
+def run_report(d, *args):
+    out = subprocess.run([sys.executable, str(REPORT), "--registry", str(d / "registry.json"), *args],
                          capture_output=True, text=True)
     assert out.returncode == 0, f"report.py failed: {out.stderr}"
     return out.stdout
@@ -95,6 +95,22 @@ def main():
         drow = row(out, "D0+D1+D2")
         assert drow["Status"] == "recorded, 3 runs" and drow["nodes"].startswith("**11 [10–12]**") and "†" not in drow["nodes"], \
             f"replicates should merge to median 11, n = 3, no caveat: {drow}"
+        # every run has ended and that state was just shown: the next report retires the family
+        heading = "### Does the new rule shrink the tree?"
+        out = run_report(d)
+        assert heading not in out and "Retired" in out and ": f." in out, f"f should be retired:\n{out}"
+        assert json.loads((d / "registry.json").read_text())["families"][0]["last_reported"]["state"], \
+            "the registry should record the reported final state"
+        for args in (("--all",), ("--family", "f"), ("--since", "today")):
+            assert heading in run_report(d, *args), f"{args} should show the retired family"
+        assert heading not in run_report(d, "--since", "2099-01-01"), "--since in the future shows nothing"
+        bad = subprocess.run([sys.executable, str(REPORT), "--registry", str(d / "registry.json"),
+                              "--family", "nope"], capture_output=True, text=True)
+        assert bad.returncode != 0 and "no such family" in bad.stderr, "an unknown --family must fail"
+        # a changed final state (a run's log grew) is shown once more
+        logC.write_text(logC.read_text() + "130 nodes bound 0.95\nfinished\n")
+        assert heading in run_report(d), "a changed final state should be reported again"
+        assert heading not in run_report(d), "and then retired again"
         # a parameter cannot be both the contrast and minor
         bad_reg = json.loads((d / "registry.json").read_text())
         bad_reg["families"][0]["minor"] = ["rule"]

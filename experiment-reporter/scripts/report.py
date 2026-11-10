@@ -10,7 +10,12 @@ upwards from the current directory) holds FAMILIES and RUNS:
     or a result recorded earlier and not rerun.
 
 Commands
-  report.py [--registry P]                     print the report (Markdown) on stdout
+  report.py [--registry P]                     print the report (Markdown) on stdout; a family
+                                               whose runs have all ended is shown once in that
+                                               final state, then retired
+  report.py --all | --family ID ... | --since today|YYYY-MM-DD[THH:MM]
+                                               also show retired and closed families: every one,
+                                               the ones named, or those with a run active since
   report.py register --family F --id ID --pid PID --log LOG [--note T]
                                                record a launched process (command and start
                                                time are read from ps)
@@ -25,6 +30,7 @@ interval beats every other row's interval; otherwise the best value so far is on
 See references/registry.md for the format.
 """
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -488,8 +494,39 @@ def family_report(fam, runs, procs, now, state, new_state):
     return out, rows
 
 
-def report(regpath):
+def fingerprint(lines):
+    return hashlib.sha256("\n".join(lines).encode()).hexdigest()[:16]
+
+
+def parse_since(text):
+    if text == "today":
+        return datetime.combine(datetime.now().date(), datetime.min.time()).timestamp()
+    try:
+        return datetime.fromisoformat(text).timestamp()
+    except ValueError:
+        fail(f"--since takes 'today' or an ISO date or time, not {text!r}")
+
+
+def active_since(runs, since):
+    """some run started, or wrote its log, at or after `since`"""
+    for r in runs:
+        if r.get("started") and datetime.fromisoformat(r["started"]).timestamp() >= since:
+            return True
+        if r.get("log") and Path(r["log"]).exists() and Path(r["log"]).stat().st_mtime >= since:
+            return True
+    return False
+
+
+def report(regpath, show_all=False, only=None, since=None):
+    """only: family ids to show (each must exist); since: a timestamp.  Any of the three
+    selections shows retired and closed families too."""
     reg = load(regpath)
+    known = {f["id"] for f in reg["families"]}
+    if only:
+        unknown = [f for f in only if f not in known]
+        if unknown:
+            fail(f"--family {', '.join(unknown)}: no such family (known: {', '.join(sorted(known))})")
+    override = show_all or bool(only) or since is not None
     procs = ps_table()
     now = time.time()
     statep = regpath.parent / STATE_NAME
@@ -500,16 +537,30 @@ def report(regpath):
     running_total = []
     any_running = False
     registered_cmds = {r["command"] for r in reg["runs"] if "command" in r}
+    retired, stamps = [], {}
     for fam in reg["families"]:
         runs = [r for r in reg["runs"] if r["family"] == fam["id"]]
-        if not runs:
+        if only and fam["id"] not in only:
             continue
-        if fam.get("closed") and not any(procs.get(r.get("pid"), {}).get("command") == r.get("command")
-                                         for r in runs):
+        if since is not None and not active_since(runs, since):
+            continue
+        if not runs:
+            if only:
+                lines += [f"### {fam['question']}", "", "No runs registered.", ""]
+            continue
+        live = any(procs.get(r.get("pid"), {}).get("command") == r.get("command") for r in runs)
+        if fam.get("closed") and not live and not override:
             continue
         out, rows = family_report(fam, runs, procs, now, state, new_state)
         if any(r["status"] == "running" for r in rows):
             any_running = True
+        else:
+            # every run has ended: show this final state once, then retire the family
+            fp = fingerprint(out)
+            if fam.get("last_reported", {}).get("state") == fp and not override:
+                retired.append(fam["id"])
+                continue
+            stamps[fam["id"]] = {"state": fp, "at": datetime.now().isoformat(timespec="seconds")}
         lines += out + [""]
     for r in reg["runs"]:
         p = procs.get(r.get("pid"))
@@ -539,8 +590,18 @@ def report(regpath):
             argv0, _, rest = p["command"].partition(" ")
             lines.append(f"- pid {pid}, {p['etime'] // 60} min, {p['rss_kb'] / 2**20:.2f} GB: "
                          f"`{(Path(argv0).name + ' ' + rest)[:140]}`")
+    if retired:
+        lines.append(f"Retired (all runs ended, final state already reported; `--family ID` or "
+                     f"`--all` shows them): {', '.join(retired)}.")
     if not any_running and not strays:
         lines.append("No registered run is running.")
+    if stamps:
+        # reload before writing, so a run registered meanwhile by another session is kept
+        fresh = load(regpath)
+        for fam in fresh["families"]:
+            if fam["id"] in stamps:
+                fam["last_reported"] = stamps[fam["id"]]
+        save(regpath, fresh)
     statep.write_text(json.dumps(new_state, indent=1))
     print("\n".join(lines).rstrip())
 
@@ -586,6 +647,10 @@ def record(regpath, a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--registry", type=Path)
+    ap.add_argument("--all", action="store_true", help="show every family, retired and closed included")
+    ap.add_argument("--family", dest="show_family", action="append",
+                    help="show this family whatever its state (repeatable)")
+    ap.add_argument("--since", help="show families with a run active since: today, or an ISO date/time")
     sub = ap.add_subparsers(dest="cmd")
     r = sub.add_parser("register")
     r.add_argument("--family", required=True)
@@ -613,7 +678,8 @@ def main():
             reg = load(regpath)
             print(f"{regpath}: {len(reg['families'])} families, {len(reg['runs'])} runs, valid")
         else:
-            report(regpath)
+            report(regpath, show_all=a.all, only=a.show_family,
+                   since=parse_since(a.since) if a.since else None)
     except RegistryError as e:
         sys.exit(f"report.py: {e}")
 
