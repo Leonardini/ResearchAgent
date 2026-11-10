@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository contains seven research skills: `demonstrator/`, `formatter/`, `illustrator/`, `lit-reviewer/`, `peer-reviewer/`, `referencer/`, and `scientific-humanizer/`. Each defines its workflow in `SKILL.md`; supporting material lives in `references/`, Python helpers in `scripts/`, and templates in `assets/` where applicable. `illustrator/agents/openai.yaml` describes the Illustrator skill to Codex.
+This repository contains eight research skills: `demonstrator/`, `experiment-reporter/`, `formatter/`, `illustrator/`, `lit-reviewer/`, `peer-reviewer/`, `referencer/`, and `scientific-humanizer/`. Each defines its workflow in `SKILL.md`; supporting material lives in `references/`, Python helpers in `scripts/`, and templates in `assets/` where applicable. `illustrator/agents/openai.yaml` describes the Illustrator skill to Codex.
 
 `prompts/` contains the prompt each skill was first built from, `shared/` contains common writing references, and `tools/review_viewer.py` supports reviewing evaluation results.
 

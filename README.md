@@ -1,7 +1,8 @@
 # Research agent skills
 
-Seven skills for writing and checking scientific papers with Claude Code. They also work in
-Codex (see "Installing in Codex"), where only the Illustrator has been tested.
+Eight skills for research with Claude Code: seven for writing and checking scientific papers,
+and one for reporting on running experiments. They also work in Codex (see "Installing in
+Codex"), where only the Illustrator has been tested.
 
 | Skill | What it does |
 |---|---|
@@ -12,6 +13,7 @@ Codex (see "Installing in Codex"), where only the Illustrator has been tested.
 | `peer-reviewer` | Writes a referee report on a manuscript, judging the methods first and the presentation second |
 | `illustrator` | Creates static figures for a manuscript's main results, with scripts that regenerate them |
 | `demonstrator` | Builds an animated step-by-step demonstration of a method on a small example |
+| `experiment-reporter` | Reports on running experiments as a table comparing each run with earlier settings: parameters, the contrast tested, measures such as time, memory or tree size, and which setting is better once that is decided |
 
 ## Installing in Claude Code
 
@@ -22,7 +24,7 @@ repository and link each skill folder into that directory:
 git clone https://github.com/Leonardini/ResearchAgent.git
 cd ResearchAgent
 mkdir -p ~/.claude/skills
-for s in demonstrator formatter illustrator lit-reviewer peer-reviewer referencer scientific-humanizer; do
+for s in demonstrator experiment-reporter formatter illustrator lit-reviewer peer-reviewer referencer scientific-humanizer; do
   ln -s "$PWD/$s" ~/.claude/skills/$s
 done
 ```
