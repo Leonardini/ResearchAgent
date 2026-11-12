@@ -30,6 +30,8 @@ interval beats every other row's interval; otherwise the best value so far is on
 See references/registry.md for the format.
 """
 import argparse
+import contextlib
+import fcntl
 import hashlib
 import json
 import math
@@ -82,6 +84,22 @@ def load(path):
 def save(path, reg):
     validate(reg)
     path.write_text(json.dumps(reg, indent=2) + "\n")
+
+
+@contextlib.contextmanager
+def registry_lock(path):
+    """Hold an exclusive lock on the registry for the duration of a with-block, so that a load-modify-save sequence
+    in one process cannot interleave with another's (two runs registering in the same second used to lose one of
+    the two registrations: both loaded the old file, and the second save overwrote the first).
+
+    path: pathlib.Path, the registry file (experiments/registry.json); it exists.
+    Yields: None. The lock is taken on entry (blocking until any other holder releases it) and released on exit,
+    whether the block ends normally or by an exception.
+    Every writer of the registry (register, record, report's last_reported stamps) wraps its load ... save in this."""
+    with open(path.with_suffix(".lock"), "a") as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        yield
+        # fcntl.flock(f.fileno(), fcntl.LOCK_UN) - Note: This is no longer needed because lock releases upon closing
 
 
 def validate(reg):
@@ -597,11 +615,12 @@ def report(regpath, show_all=False, only=None, since=None):
         lines.append("No registered run is running.")
     if stamps:
         # reload before writing, so a run registered meanwhile by another session is kept
-        fresh = load(regpath)
-        for fam in fresh["families"]:
-            if fam["id"] in stamps:
-                fam["last_reported"] = stamps[fam["id"]]
-        save(regpath, fresh)
+        with registry_lock(regpath):
+            fresh = load(regpath)
+            for fam in fresh["families"]:
+                if fam["id"] in stamps:
+                    fam["last_reported"] = stamps[fam["id"]]
+            save(regpath, fresh)
     statep.write_text(json.dumps(new_state, indent=1))
     print("\n".join(lines).rstrip())
 
@@ -609,6 +628,11 @@ def report(regpath, show_all=False, only=None, since=None):
 # ---------------------------------------------------------------- registering
 
 def register(regpath, a):
+    with registry_lock(regpath):
+        register_locked(regpath, a)
+
+
+def register_locked(regpath, a):
     reg = load(regpath)
     procs = ps_table()
     p = procs.get(a.pid)
@@ -632,6 +656,11 @@ def register(regpath, a):
 
 
 def record(regpath, a):
+    with registry_lock(regpath):
+        record_locked(regpath, a)
+
+
+def record_locked(regpath, a):
     reg = load(regpath)
     run = {"id": a.id, "family": a.family,
            "params": dict(kv.split("=", 1) for kv in a.param),
