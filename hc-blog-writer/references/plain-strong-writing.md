@@ -1,0 +1,1 @@
+../../shared/plain-strong-writing.md

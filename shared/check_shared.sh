@@ -4,7 +4,7 @@
 here=$(cd "$(dirname "$0")" && pwd)
 status=0
 for f in ai-tells.md plain-strong-writing.md; do
-  for skill in "$HOME/.claude/skills/humanizer" "$here/../scientific-humanizer"; do
+  for skill in "$HOME/.claude/skills/humanizer" "$here/../scientific-humanizer" "$here/../hc-blog-writer"; do
     p="$skill/references/$f"
     if [ ! -L "$p" ] || [ "$(cd "$(dirname "$p")" && realpath "$(readlink "$p")")" != "$here/$f" ]; then
       echo "NOT SHARED: $p is not a link to $here/$f"; status=1

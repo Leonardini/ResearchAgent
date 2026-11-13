@@ -1,0 +1,389 @@
+# HerdingChickens blog rules: the one place to switch a rule on or off, or change a number.
+#
+# Every rule has:
+#   on     = true / false          whether it counts towards the report
+#   kind   = "auto"                scripts/check_post.py checks it
+#            "manual"              a person (or the agent) answers it in the report
+#            "site"                a property of the website, not of one post; checked once, not per post
+#   source = where the rule comes from: "gillivan" (Connor Gillivan's SEO checklist),
+#            "aeo" (answer-engine optimisation, see references/aeo.md),
+#            "house" (Leonid's house rules), "site" (what the website code needs)
+#   why    = one line saying why it is on or off. Change the line when you change the switch.
+#
+# Rules switched OFF are still reported (as OFF), so the disagreement stays visible.
+# House rules are Leonid's; do not switch one off without him.
+#
+# Numbers that are a judgement (lengths, caps) live here and nowhere else, so the checker
+# and the instructions in SKILL.md never disagree.
+
+# ---------------------------------------------------------------------------
+# Site format (the website silently skips a post that breaks these)
+# ---------------------------------------------------------------------------
+
+[rules.frontmatter_valid]
+on = true
+kind = "auto"
+source = "site"
+why = "lib/blog/index.ts skips any post missing a required field or with an unknown cluster or tier."
+required = ["title", "meta_description", "slug", "published", "date", "author", "focus_keyword",
+            "cluster", "tier", "tags", "emoji", "gradient", "related", "secondary_keywords"]
+clusters = ["time", "paralysis", "focus", "knowledge", "ai"]
+tiers = ["pillar", "standard", "snackable"]
+authors = ["Leonid", "Stéphane"]
+
+[rules.unpublished]
+on = true
+kind = "auto"
+source = "house"
+why = "A draft goes in as published: false. Only a person flips it to true after review."
+
+[rules.unique_focus_keyword]
+on = true
+kind = "auto"
+source = "site"
+why = "Two posts on one focus keyword compete with each other in search (cannibalisation). Needs --site-blog."
+
+[rules.unique_slug]
+on = true
+kind = "auto"
+source = "site"
+why = "A repeated slug overwrites an existing page. Needs --site-blog."
+
+[rules.related_exist]
+on = true
+kind = "auto"
+source = "site"
+why = "Every slug in related: and every /resources/ link must be a real post, or the reader hits a 404. Needs --site-blog."
+
+# ---------------------------------------------------------------------------
+# Connor Gillivan's checklist, item by item (references/checklist.md)
+# ---------------------------------------------------------------------------
+
+[rules.title_has_keyword]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: the title is the strongest on-page signal and costs nothing in length."
+
+[rules.title_length]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: long titles are cut off in search results. Google publishes no fixed limit; 70 characters is a common working cap."
+max_chars = 70
+
+[rules.title_not_clickbait]
+on = true
+kind = "manual"
+source = "gillivan"
+why = "Kept: the title names the reader's problem in their words and promises only what the post delivers."
+
+[rules.slug_short_keyword]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: a short slug built from the keyword is easy to read and share."
+max_chars = 60
+
+[rules.author_bio]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept, at site level: author: must be a known author, whose bio page the site already has (lib/blog/authors.ts)."
+
+[rules.word_count_1500]
+on = false
+kind = "auto"
+source = "gillivan"
+why = "OFF (Leonid, 22 Aug 2026): HC posts are bite-sized, one tip each. Google itself says it has no preferred word count."
+min_words = 1500
+
+[rules.word_count_in_tier]
+on = true
+kind = "auto"
+source = "house"
+why = "Replaces the 1,500-word rule: length follows the tier in docs/BLOG-STRATEGY.md. Never pad to reach a number."
+# Body prose words only: the short block, cards, FAQ, Keep reading and disclaimer are not counted,
+# so these run lower than BLOG-STRATEGY's whole-page figures (snackable ~600-800, standard
+# ~900-1,200, pillar ~1,400-2,000). Calibrated on the live posts, 13 Nov 2026.
+snackable = [300, 700]
+standard = [550, 1100]
+pillar = [900, 1800]
+
+[rules.images_5plus]
+on = false
+kind = "auto"
+source = "gillivan"
+why = "OFF: five images turn a two-minute read into a scroll. One cover image is enough for a one-tip post."
+min_images = 5
+
+[rules.video_or_infographic]
+on = false
+kind = "manual"
+source = "gillivan"
+why = "OFF: an embedded video adds load time and a second thing to attend to. Use only when the tip is a screen action best shown."
+
+[rules.cover_alt_text]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: alt text costs one line, helps screen-reader users, and tells search what the image shows."
+
+[rules.inline_image_alt]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: every inline image has alt text."
+
+[rules.table_of_contents]
+on = false
+kind = "auto"
+source = "gillivan"
+why = "OFF: a post short enough to need no contents list is the goal. 'The short version' block already does the job."
+
+[rules.keyword_in_h2]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: at least one section heading carries the keyword, in natural words."
+
+[rules.short_paragraphs]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept, relaxed: Gillivan asks for 1 to 2 sentences; Leonid's voice runs a little longer, so the cap is 4."
+max_sentences = 4
+
+[rules.lists_where_helpful]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: the 'short version' block is the post's list. More lists only where steps really are steps."
+
+[rules.font_and_design]
+on = false
+kind = "site"
+source = "gillivan"
+why = "Site-level: font and colour are set once in the site's CSS, not per post."
+
+[rules.internal_links_5]
+on = false
+kind = "auto"
+source = "gillivan"
+why = "OFF in this form: five in-body links pull an easily distracted reader away mid-tip. See internal_links_min."
+min_links = 5
+
+[rules.internal_links_min]
+on = true
+kind = "auto"
+source = "house"
+why = "BLOG-STRATEGY: one link up to the topic hub and two sideways. Keep reading links count; at least one sits in the body."
+min_total = 3
+min_in_body = 1
+
+[rules.external_links_3]
+on = false
+kind = "auto"
+source = "gillivan"
+why = "OFF in this form: every external link is a fabrication risk and a click away. Link what a claim needs, verified."
+min_links = 3
+
+[rules.mobile_and_speed]
+on = false
+kind = "site"
+source = "gillivan"
+why = "Site-level: check the site once with PageSpeed Insights, not per post."
+
+[rules.one_cta]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept, narrowed: one product invitation (the Telegram bot or early access), after the tip."
+max_cta_paragraphs = 1
+
+[rules.multiple_cta_types]
+on = false
+kind = "site"
+source = "gillivan"
+why = "OFF: sidebar CTAs and exit pop-ups are exactly the overwhelm HC exists to remove."
+
+[rules.expert_quotes]
+on = false
+kind = "manual"
+source = "gillivan"
+why = "OFF by default: quotes lengthen the post and invite fabrication. The GEO study found quotations raise AI-citation odds, so switch on per post if a real, verified quote is to hand."
+
+[rules.lived_experience]
+on = true
+kind = "manual"
+source = "gillivan"
+why = "Kept: Gillivan's 'personal anecdotes'. The author supplies them. The writer never invents the author's experience; it leaves an [AUTHOR: ...] slot."
+
+[rules.social_share]
+on = false
+kind = "site"
+source = "gillivan"
+why = "Site-level: share buttons are site chrome, not post content."
+
+[rules.final_edit]
+on = true
+kind = "manual"
+source = "gillivan"
+why = "Kept: 'could this be better?' is the humanizer pass and a read-aloud before the report."
+
+# Not in Gillivan's list as written but asked for by Stephane alongside it.
+[rules.meta_description]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: the snippet under the title in search. Contains the keyword and one outcome."
+min_chars = 120
+max_chars = 160
+
+[rules.keyword_in_opening]
+on = true
+kind = "auto"
+source = "gillivan"
+why = "Kept: the keyword appears once, in plain English, in the opening lines."
+within_words = 100
+
+[rules.no_keyword_stuffing]
+on = true
+kind = "auto"
+source = "aeo"
+why = "Keyword stuffing scored below doing nothing in the GEO study, and readers notice it."
+max_per_100_words = 1.5
+
+# ---------------------------------------------------------------------------
+# Answer-engine optimisation (references/aeo.md)
+# ---------------------------------------------------------------------------
+
+[rules.short_version_early]
+on = true
+kind = "auto"
+source = "aeo"
+why = "The direct answer sits in the first screen: the 'short version' block starts within the first words."
+within_words = 250
+min_rows = 3
+max_rows = 6
+
+[rules.do_this_today]
+on = true
+kind = "auto"
+source = "house"
+why = "One actionable tip: the short block's last row is 'Do this today'."
+
+[rules.question_heading]
+on = true
+kind = "auto"
+source = "aeo"
+why = "At least one body heading phrased as the question people type, so an answer engine can lift the section beneath it."
+min = 1
+
+[rules.faq_block]
+on = true
+kind = "auto"
+source = "aeo"
+why = "A '## FAQ' with bold questions; the site turns it into FAQPage schema automatically. Few enough to stay short."
+min_items = 2
+max_items = 4
+
+[rules.faq_answers_standalone]
+on = true
+kind = "auto"
+source = "aeo"
+why = "Each FAQ answer makes sense when quoted alone: short, and names the subject rather than 'it'."
+max_words = 60
+
+[rules.statistics_or_named_source]
+on = false
+kind = "auto"
+source = "aeo"
+why = "OFF by default: the GEO study found statistics and named sources raise AI-citation odds, but the pressure to add them is how fake studies got in. Switch on for a post that makes factual claims."
+min_sources = 1
+
+[rules.ai_crawlers_allowed]
+on = true
+kind = "site"
+source = "aeo"
+why = "Site-level: robots.txt must let Googlebot, OAI-SearchBot and PerplexityBot in, or the post cannot be cited at all. Check once."
+
+# ---------------------------------------------------------------------------
+# Leonid's house rules (references/house-style.md). Do not switch off without him.
+# ---------------------------------------------------------------------------
+
+[rules.no_deficit_framing]
+on = true
+kind = "auto"
+source = "house"
+why = "No clinical or deficit framing of ADHD. Describe the behaviour and what helps, with respect."
+# Matched as whole words or prefixes in prose (links and the disclaimer are skipped).
+banned = ["symptom", "suffer", "sufferer", "disorder", "afflict", "patient", "deficit",
+          "impairment", "dysfunctional", "normal people", "broken brain", "struggle with adhd"]
+
+[rules.small_words]
+on = true
+kind = "auto"
+source = "house"
+why = "Plain, light register. Flags words on the list and any very long word not on the allowed list."
+flag = ["amalgamation", "utilise", "utilize", "facilitate", "leverage", "paradigm", "methodology",
+        "optimise", "optimize", "elucidate", "commence", "endeavour", "plethora", "myriad",
+        "notwithstanding", "aforementioned", "cognitive load"]
+long_word_chars = 13
+allowed_long = ["productivity", "procrastination", "procrastinating", "hyperfocusing", "notifications",
+                "neurodivergent", "concentrating", "overwhelming", "overwhelmingly", "accountability",
+                "understanding", "conversations", "uncomfortable", "automatically", "relationships"]
+
+[rules.contact_link]
+on = true
+kind = "auto"
+source = "house"
+why = "Every 'let us know' or 'tell us' links to https://herdingchickens.com/contact (the relative /contact is the same page)."
+phrases = ["let us know", "tell us", "get in touch", "write to us", "drop us a line", "we'd love to hear"]
+
+[rules.sources_verified]
+on = true
+kind = "auto"
+source = "house"
+why = "No fabricated citations: every external link is in the post's sources ledger with the passage that supports the claim. --check-links also fetches each one."
+
+[rules.no_ai_vocabulary]
+on = true
+kind = "auto"
+source = "house"
+why = "Humanizer pass: words that mark text as machine-written (shared/ai-tells.md)."
+flag = ["delve", "tapestry", "testament", "pivotal", "crucial", "underscore", "showcase",
+        "foster", "leverage", "seamless", "robust", "navigate the", "landscape", "realm",
+        "journey", "game-changer", "unlock", "empower", "load-bearing", "multifaceted", "quietly"]
+
+[rules.em_dash_cap]
+on = true
+kind = "auto"
+source = "house"
+why = "Em-dashes are the commonest surface tell of Claude-drafted text."
+max = 1
+
+[rules.idiom_cap]
+on = true
+kind = "auto"
+source = "house"
+why = "At most one idiom per post: idiom density is itself an AI tell. The list catches common ones; the humanizer pass catches the rest."
+max = 1
+idioms = ["game changer", "silver bullet", "at the end of the day", "low-hanging fruit",
+          "rabbit hole", "move the needle", "the elephant in the room", "a double-edged sword",
+          "hit a wall", "bite the bullet", "in a nutshell", "the tip of the iceberg",
+          "easier said than done", "piece of cake", "on autopilot", "the bottom line",
+          "take it with a grain of salt", "hit the ground running", "a breath of fresh air",
+          "the name of the game", "best of both worlds", "back to square one"]
+
+[rules.disclaimer]
+on = true
+kind = "auto"
+source = "house"
+why = "Every post ends with the site's not-medical-advice footer and an NHS link."
+
+[rules.author_slots_filled]
+on = true
+kind = "auto"
+source = "house"
+why = "Reports any [AUTHOR: ...] slot still open. A draft with open slots is not ready to publish."

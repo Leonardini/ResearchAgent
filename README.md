@@ -1,7 +1,7 @@
 # Research agent skills
 
-Eight skills for research with Claude Code: seven for writing and checking scientific papers,
-and one for reporting on running experiments. They also work in Codex (see "Installing in
+Nine skills for Claude Code: seven for writing and checking scientific papers, one for
+reporting on running experiments, and one for writing HerdingChickens blog posts. They also work in Codex (see "Installing in
 Codex"), where only the Illustrator has been tested.
 
 | Skill | What it does |
@@ -14,6 +14,7 @@ Codex"), where only the Illustrator has been tested.
 | `illustrator` | Creates static figures for a manuscript's main results, with scripts that regenerate them |
 | `demonstrator` | Builds an animated step-by-step demonstration of a method on a small example |
 | `experiment-reporter` | Reports on running experiments as a table comparing each run with earlier settings: parameters, the contrast tested, measures such as time, memory or tree size, and which setting is better once that is decided |
+| `hc-blog-writer` | Writes a HerdingChickens blog post for a keyword from the Ubersuggest export, verifies every source, and scores the draft against a register of switchable SEO, answer-engine and house-style rules (`hc-blog-writer/rules.toml`) |
 
 ## Installing in Claude Code
 
@@ -24,7 +25,7 @@ repository and link each skill folder into that directory:
 git clone https://github.com/Leonardini/ResearchAgent.git
 cd ResearchAgent
 mkdir -p ~/.claude/skills
-for s in demonstrator experiment-reporter formatter illustrator lit-reviewer peer-reviewer referencer scientific-humanizer; do
+for s in demonstrator experiment-reporter formatter hc-blog-writer illustrator lit-reviewer peer-reviewer referencer scientific-humanizer; do
   ln -s "$PWD/$s" ~/.claude/skills/$s
 done
 ```
@@ -44,8 +45,8 @@ mkdir -p .claude/skills
 ln -s /path/to/ResearchAgent/illustrator .claude/skills/illustrator
 ```
 
-**Use links, not copies.** `scientific-humanizer/references/` links to the writing guides in
-`shared/`, and a copied folder loses them. Keep the clone where it is: the links point into it.
+**Use links, not copies.** `scientific-humanizer/references/` and `hc-blog-writer/references/`
+link to the writing guides in `shared/`, and a copied folder loses them. Keep the clone where it is: the links point into it.
 To update, run `git pull` in the clone. The links pick up the change.
 
 **On Windows**, git checks symbolic links out as plain text files unless symlinks are enabled.
@@ -85,6 +86,7 @@ All the helper scripts need Python 3. Beyond that:
 | `demonstrator` | Chrome or Chromium and ffmpeg, to export the animation as MP4 or GIF |
 | `illustrator` | Matplotlib, for the figure scripts it writes |
 | `lit-reviewer` | Network access to OpenAlex and arXiv; an OpenAlex API key (`OPENALEX_API_KEY`) is optional |
+| `hc-blog-writer` | The PyYAML Python package (`pip install pyyaml`); network access for `--check-links` |
 | `scientific-humanizer`, `peer-reviewer` | Nothing beyond Python |
 
 Some skills use optional connectors (Undermind, Firecrawl) when they are available and work
