@@ -32,7 +32,7 @@ live there; this file explains the mapping. To change the policy, edit `rules.to
 | 11b | Personal anecdotes and real examples | `lived_experience` | on | The author supplies them; the writer never invents them |
 | 12 | Social share buttons | `social_share` | site | Site chrome |
 | 13 | "Could this be better?" final edit | `final_edit` | on | The humanizer pass and a read-aloud |
-| - | Meta description (asked for alongside the list) | `meta_description` | on | 120-160 characters, keyword, one outcome |
+| - | Meta description (asked for alongside the list) | `meta_description` | on | Length range in `rules.toml` (Stéphane's 15 Nov 2026 brief), keyword, one outcome |
 | - | Keyword early, not stuffed | `keyword_in_opening`, `no_keyword_stuffing` | on | See `aeo.md` on keyword stuffing |
 
 The source numbers its sections 1 to 13 but has no item 6; the numbering above follows it.

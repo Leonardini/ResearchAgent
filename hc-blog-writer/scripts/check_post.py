@@ -105,8 +105,16 @@ def unpublished(c, r):
 def unique_focus_keyword(c, r):
     if c.site is None:
         return "WARN", "not checked: pass --site-blog"
-    clash = [p["slug"] for p in c.site if str(p.get("focus_keyword", "")).lower().strip() == c.kw]
-    return ("FAIL", f"already the focus keyword of: {', '.join(clash)}") if clash else ("PASS", f"'{c.kw}' unused as a focus keyword")
+    mine = set(blog.keyword_list(c.fm.get("secondary_keywords")))
+    probs = [f"'{c.kw}' is already the focus keyword of {p['slug']}" for p in c.site
+             if str(p.get("focus_keyword", "")).lower().strip() == c.kw]
+    probs += [f"'{c.kw}' is a secondary keyword of {p['slug']}" for p in c.site
+              if c.kw in blog.keyword_list(p.get("secondary_keywords"))]
+    probs += [f"secondary '{k}' is the focus keyword of {p['slug']}" for p in c.site
+              for k in sorted(mine) if str(p.get("focus_keyword", "")).lower().strip() == k]
+    if probs:
+        return "FAIL", "; ".join(probs)
+    return "PASS", f"'{c.kw}' is no other post's focus or secondary keyword, and no secondary here is another post's focus"
 
 
 def unique_slug(c, r):
@@ -415,9 +423,35 @@ def disclaimer(c, r):
     return ("PASS", "footer present") if ok else ("FAIL", "missing the not-medical-advice footer with an NHS link")
 
 
+def _open_until_published(c):
+    """An open note is a WARN on a draft and a FAIL on a post marked published: true."""
+    return "FAIL" if c.fm.get("published") is True else "WARN"
+
+
 def author_slots_filled(c, r):
     slots = AUTHOR_SLOT_RE.findall(c.body)
-    return ("WARN", f"{len(slots)} open slot(s): " + "; ".join(s[:60] for s in slots)) if slots else ("PASS", "no open slots")
+    if not slots:
+        return "PASS", "no open slots"
+    return _open_until_published(c), f"{len(slots)} open slot(s): " + "; ".join(s[:60] for s in slots)
+
+
+def source_needed_open(c, r):
+    hits = [(m, c.body.count(m)) for m in r["markers"] if m in c.body]
+    if not hits:
+        return "PASS", "no unsourced-claim markers"
+    return _open_until_published(c), "; ".join(f"{n} x {m}" for m, n in hits)
+
+
+def inbound_link(c, r):
+    if c.site is None:
+        return "WARN", "not checked: pass --site-blog"
+    target = f"/resources/{c.fm.get('slug')}"
+    rx = re.compile(rf"\]\((?:https://(?:www\.)?herdingchickens\.com)?{re.escape(target)}(?:[#?][^)]*)?\)")
+    linking = [p["slug"] for p in c.site if rx.search(p["_body"])]
+    if len(linking) >= r["min_inbound"]:
+        return "PASS", f"linked from {', '.join(linking)}"
+    return "WARN", (f"{len(linking)} inbound link(s) (want {r['min_inbound']}): add one in an existing post, "
+                    "in a sentence already about this idea")
 
 
 CHECKS = {f.__name__: f for f in [
@@ -428,7 +462,7 @@ CHECKS = {f.__name__: f for f in [
     keyword_in_opening, no_keyword_stuffing, short_version_early, do_this_today, question_heading,
     faq_block, faq_answers_standalone, statistics_or_named_source, no_deficit_framing, small_words,
     contact_link, sources_verified, no_ai_vocabulary, em_dash_cap, idiom_cap, disclaimer,
-    author_slots_filled]}
+    author_slots_filled, source_needed_open, inbound_link]}
 
 
 def evaluate(ctx):

@@ -66,13 +66,18 @@ List every factual claim the outline needs. For each, open a source and copy the
 into `<slug>.sources.json` (format in `house-style.md`). If no source says it, the claim becomes
 experience ("many of us find…") or goes. Never write a citation from memory, and never let a source
 say more in the post than it says on the page (population, year, whether it is about ADHD at all).
+Open every paper link, including ones already in a post you are editing, and compare the paper's
+title and abstract with the sentence (`paper_title_matches`). If they do not match, or nobody could
+open it, write `[SOURCE NEEDED]` and stop; never swap in a different unopened paper.
 
 ### 4. Draft
 
 Start from `assets/post-template.md`. Fill the frontmatter (`published: false`; `cover` and
 `cover_alt` are added by a person with the photo, so leave them out). Put the author's own experience
 in `[AUTHOR: ...]` slots; never invent it. Link 2-4 existing posts in `related` and Keep reading, at
-least one of them in the body.
+least one of them in the body. Name one sentence in an existing post, already about this idea, that
+should carry an inbound link (`inbound_link`). Keep secondary keywords to phrases with real demand
+(`low_volume_secondaries` in `rules.toml` holds the threshold); never add a section to host one.
 
 ### 5. Humanizer pass
 
@@ -98,6 +103,21 @@ appending a short section to the report:
 `--check-links` asks NCBI's E-utilities whether a PubMed or PMC ID exists and prints its title, because those sites answer a made-up ID with a normal-looking page; compare the title with the ledger. A link that answers 403 to the script (publisher bot walls) is checked in a browser or through the
 publisher's abstract page, and the report says which.
 
+## SEO pass on an existing post
+
+When asked to improve a post that already exists (an editorial or SEO brief), the author's sentences
+stay theirs (`keep_author_paragraphs`). Change only the chrome: title, `meta_description`,
+`focus_keyword` and `secondary_keywords`, the keyword once in the opening in the author's spoken
+register, the one worked example the brief names (short, using a task the post already mentions, no
+invented facts or features), and the links the brief names. Leave `published`, `date`, `slug`,
+`cover` and `cover_alt` alone. Set `updated:` only if the body changed materially
+(`no_fake_freshness`). Re-open every paper link. Run the checker with `--site-blog` so a focus keyword
+shared with another post, as focus or as secondary, shows up. Report every paragraph touched, with the
+new sentences quoted, and a short plain note for whoever publishes.
+
+Publishing is a person's step and follows `publish_cadence`: one new or materially updated guide on
+the public site per window, never a batch in one week, however many drafts are ready.
+
 ## Output
 
 Save in a workspace folder, never in the website repo (default: `hc-blog-writer-workspace/` beside
@@ -112,5 +132,6 @@ left and why, any open `[AUTHOR]` slots, and anything that could not be verified
 
 ## Things that are not this skill's job
 
-Publishing, choosing the cover photo, editing existing posts (a SECONDARY clash is reported, not
-fixed), and site-level items (robots.txt, page speed, share buttons), which the report lists as SITE.
+Publishing, choosing the cover photo, editing existing posts unasked (a SECONDARY clash is reported,
+not fixed, unless a brief asks for the SEO pass above), and site-level items (robots.txt, page speed,
+share buttons, publishing cadence), which the report lists as SITE.

@@ -1,7 +1,7 @@
 ---
 title: "<Focus keyword, capitalised>: <the promise, in the reader's words>"
 meta_description: >-
-  <120-160 characters. Contains the focus keyword and one outcome the reader gets.>
+  <Length per rules.meta_description. Contains the focus keyword and states one outcome; stands alone in llms.txt.>
 slug: <keyword-words-plus-one-or-two>
 published: false
 date: <YYYY-MM-DD>T12:00:00.000Z

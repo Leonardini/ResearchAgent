@@ -35,13 +35,13 @@ authors = ["Leonid", "Stéphane"]
 on = true
 kind = "auto"
 source = "house"
-why = "A draft goes in as published: false. Only a person flips it to true after review."
+why = "A draft goes in as published: false. Only a person flips it to true after review. A post a person has already set to true on staging (Stéphane's call for the four 13 Nov posts) FAILs here by design when re-checked; that FAIL is expected, not a fault."
 
 [rules.unique_focus_keyword]
 on = true
 kind = "auto"
 source = "site"
-why = "Two posts on one focus keyword compete with each other in search (cannibalisation). Needs --site-blog."
+why = "Two posts on one phrase compete with each other in search (cannibalisation): no shared focus keyword, and (Stéphane's 15 Nov 2026 brief) no focus keyword that is another post's secondary, either way round. Needs --site-blog."
 
 [rules.unique_slug]
 on = true
@@ -236,9 +236,9 @@ why = "Kept: 'could this be better?' is the humanizer pass and a read-aloud befo
 on = true
 kind = "auto"
 source = "gillivan"
-why = "Kept: the snippet under the title in search. Contains the keyword and one outcome."
-min_chars = 120
-max_chars = 160
+why = "Kept: the snippet under the title in search, and the line llms.txt uses, so it must stand alone. Contains the keyword and states one outcome. Range from BLOG-STRATEGY §7 and Stéphane's 15 Nov 2026 brief (was 120-160)."
+min_chars = 140
+max_chars = 155
 
 [rules.keyword_in_opening]
 on = true
@@ -386,4 +386,56 @@ why = "Every post ends with the site's not-medical-advice footer and an NHS link
 on = true
 kind = "auto"
 source = "house"
-why = "Reports any [AUTHOR: ...] slot still open. A draft with open slots is not ready to publish."
+why = "Reports any [AUTHOR: ...] slot still open: WARN on a draft, FAIL once published: true. A leftover generator note is a sign of a hastily generated page (Stéphane's 15 Nov 2026 brief)."
+
+# ---------------------------------------------------------------------------
+# From Stéphane's 15 Nov 2026 SEO brief (docket draft 2026-11-15-hc-seo-brief-stephane-cursor.md,
+# also in the website repo's downloads). House rules: switch off only with Leonid and Stéphane.
+# ---------------------------------------------------------------------------
+
+[rules.source_needed_open]
+on = true
+kind = "auto"
+source = "house"
+why = "Stéphane's 15 Nov 2026 brief: a claim whose paper nobody opened becomes [SOURCE NEEDED] (or a TODO(citation) comment) and stops there. WARN on a draft, FAIL once published: true."
+markers = ["[SOURCE NEEDED]", "TODO(citation)"]
+
+[rules.paper_title_matches]
+on = true
+kind = "manual"
+source = "house"
+why = "Stéphane's 15 Nov 2026 brief: every paper link was opened by a person or agent, and the paper's title, year and population match the sentence; if not, the sentence becomes [SOURCE NEEDED] or 'many adults with ADHD report...'. check_post.py --check-links prints PubMed/PMC titles to compare."
+
+[rules.inbound_link]
+on = true
+kind = "auto"
+source = "house"
+why = "Stéphane's 15 Nov 2026 brief: a new post gets an inbound link from an existing post, in a sentence already about the idea, so it is not an orphan. WARN until one exists. Needs --site-blog."
+min_inbound = 1
+
+[rules.low_volume_secondaries]
+on = true
+kind = "manual"
+source = "house"
+why = "Stéphane's 15 Nov 2026 brief: drop secondary keywords at or below this monthly volume unless the reader needs those words; never write a section, or a post, to host one. A kept one carries a YAML comment with its volume and date."
+max_monthly_volume = 10
+
+[rules.publish_cadence]
+on = true
+kind = "site"
+source = "house"
+why = "Stéphane's 15 Nov 2026 brief: the public site gets one new guide, or one real update of an older one, every min_days to max_days days, never a batch in the same week. Several drafts can wait in the repo."
+min_days = 7
+max_days = 14
+
+[rules.no_fake_freshness]
+on = true
+kind = "manual"
+source = "house"
+why = "Stéphane's 15 Nov 2026 brief: never change date:; set updated: only when the body changed materially, never for a title, meta or keyword edit."
+
+[rules.keep_author_paragraphs]
+on = true
+kind = "manual"
+source = "house"
+why = "Stéphane's 15 Nov 2026 brief: on an SEO pass over an existing post, change only the chrome (title, meta, keywords, the keyword once in the opening, a named example, links). The author's other paragraphs stay word for word; list any paragraph touched."

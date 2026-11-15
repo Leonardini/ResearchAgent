@@ -108,12 +108,18 @@ def sentences(paragraph):
 
 
 def site_posts(blog_dir, exclude_slug=None):
-    """Frontmatter of every post in the website's content/blog folder (published or not)."""
+    """Frontmatter of every post in the website's content/blog folder (published or not),
+    with the Markdown body under the key '_body'."""
     posts = []
     for p in sorted(Path(blog_dir).glob("*.md")):
         if p.name == "README.md":
             continue
-        fm, _ = read_post(p)
+        fm, body = read_post(p)
         if fm.get("slug") and fm.get("slug") != exclude_slug:
-            posts.append({"file": p.name, **fm})
+            posts.append({"file": p.name, **fm, "_body": body})
     return posts
+
+
+def keyword_list(value):
+    """A frontmatter keyword field as a list of lower-case phrases."""
+    return [str(k).lower().strip() for k in (value or []) if str(k).strip()]

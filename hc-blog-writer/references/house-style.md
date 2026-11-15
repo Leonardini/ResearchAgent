@@ -53,6 +53,9 @@ Rules from `docs/BLOG-STRATEGY.md` §5, which both founders agreed:
 5. Never claim clinical outcomes for Herding Chickens.
 6. If the evidence is thin, say so. "Research on hyperfocus is still thin" is a fine sentence.
 7. A study that is not about ADHD can be cited, but the post says so.
+8. A claim whose source nobody has opened, or whose paper turns out to be about something else,
+   becomes `[SOURCE NEEDED]` (or "many adults with ADHD report…") until a person adds a link they
+   opened. The checker flags a leftover marker, and fails it on a post marked `published: true`.
 
 The proof goes in the post's **sources ledger**, `<slug>.sources.json`, next to the draft:
 
@@ -76,6 +79,17 @@ with `curl "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&
   updates (`/early-access`), in one paragraph. Say honestly what exists today (the Telegram bot)
   and what is coming.
 - Internal links go to `/resources/<slug>`; the topic hub is `/resources/topics/<cluster>`.
+
+## Keywords and links between posts (Stéphane's 15 Nov 2026 brief)
+
+- One URL, one phrase. A post's focus keyword is no other post's focus **or secondary** keyword. When
+  two posts want one head phrase, give each a distinct job (for example, choosing the target before
+  hyperfocus versus noticing the clock once inside it), say the split once in the author's words, and
+  link across.
+- One intent, one page: "adhd overwhelm", "adhd overwhelmed" and "what to do when overwhelmed adhd"
+  are one search. Target the phrase with demand; keep a variant as a secondary only if it has some.
+- A new post gets one inbound link from an existing post, from a sentence already about the idea.
+- No fake freshness: `date:` never moves, and `updated:` changes only with a material body change.
 
 ## Post shape (what the site renders)
 
