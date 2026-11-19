@@ -1,6 +1,6 @@
 ---
 name: formatter
-description: Check and fix the layout and structure of a scientific manuscript (pandoc Markdown or LaTeX) against the author's formatting conventions. It compiles a private copy and finds tables split across pages, large empty spaces, paragraphs over about 12 lines, short dangling last lines worth trimming, wrapped table rows, overfull or inconsistent mathematics, uncited references, tables and figures, cross-references and headings numbered by hand instead of by label, citation numbers out of order, numbers with more than 5 significant figures, terms used before they are defined, untitled sections, sections without subsections, subsection titles that wrap or join two claims with "and", missing section openings and closings, and a missing or incomplete "The rest of this paper is organised as follows" paragraph. Layout problems are fixed mechanically, wording changes are proposed, and everything is marked on an annotated PDF. Use this whenever the user asks to format, typeset-check, polish the layout of, tighten, shorten, or prepare a paper for submission, mentions page breaks, floats, cross-references, labels, renumbering or reordering sections or appendices, overfull boxes, widows or orphans, citation order or numbering, the roadmap paragraph or section transitions, or asks whether a manuscript follows their conventions.
+description: Check and fix the layout and structure of a scientific manuscript (pandoc Markdown or LaTeX) against the author's formatting conventions. It compiles a private copy and finds tables split across pages, large empty spaces, paragraphs over about 12 lines, short dangling last lines worth trimming, wrapped table rows, overfull or inconsistent mathematics, uncited references, tables and figures, cross-references and headings numbered by hand instead of by label, citation numbers out of order, numbers with more than 5 significant figures, terms used before they are defined, acronyms spelled out again after their definition, leftover placeholders ([REF], TODO, "Figure ?"), software and databases not cited at first mention, the same number stated in two places, untitled sections, sections without subsections, subsection titles that wrap or join two claims with "and", missing section openings and closings, and a missing or incomplete "The rest of this paper is organised as follows" paragraph. Layout problems are fixed mechanically, wording changes are proposed, and everything is marked on an annotated PDF. Use this whenever the user asks to format, typeset-check, polish the layout of, tighten, shorten, or prepare a paper for submission, mentions page breaks, floats, cross-references, labels, renumbering or reordering sections or appendices, overfull boxes, widows or orphans, citation order or numbering, the roadmap paragraph or section transitions, or asks whether a manuscript follows their conventions.
 ---
 
 # Formatter
@@ -31,6 +31,10 @@ if the user seems to expect them here.
 | No paragraph over about 12 lines (13-14 lines only if it holds more than one idea) | script (PDF) | propose / review |
 | Short last lines flagged as places to trim a few words (paragraphs of 5+ lines, outside algorithms and displays) | script (PDF) | propose |
 | Every term defined before first use (front and back matter are exempt: title block, authors and affiliations, abstract, keywords, funding, declarations, acknowledgements, references) | script (acronyms) + agent (all terms) | propose / review |
+| Once an acronym is defined, the text uses it: the spelled-out form does not reappear, and the acronym is not defined a second time (headings, captions and table cells are review items) | script | propose / review |
+| No placeholder left in the text: [REF], [?], TODO, TBD, XX%, "Figure ?", "??" in the PDF | script (source + PDF) | review |
+| Every named software tool, database or other resource is cited at its first mention, not only later | script finds candidates, agent judges | propose / review |
+| A fact is stated once: the same number in two paragraphs is either cut to one place or confirmed as a deliberate summary | script finds repeated numbers, agent judges | propose / review |
 | Every section and subsection has a title (a section's opening text before its first subsection needs none) | script | propose |
 | No section without subsections, except the introduction and the conclusion or discussion (back matter and appendices are exempt): a flat section signals ideas that belong elsewhere | script | propose |
 | A subsection title fits on one line and makes one point: a title that wraps, or that joins two claims with "and" ("X certifies … and is slower"), means the subsection should be split | script (wrapping, PDF; candidate "and"s, source) + agent judges | propose / review |
@@ -168,6 +172,31 @@ theoretical results imply" cut to "the theory imply" is wrong; "the theory impli
   it does). If present, list the sections it leaves out. It does not list the appendices: the
   author prefers cutting them from the roadmap to giving them a paragraph of their own, since
   each appendix is reached from the text that uses it. If the roadmap lists them, propose the cut.
+- **Spelled-out form after the acronym** (`acronyms`): propose the acronym in place of each
+  later spelled-out form, and for a second definition propose dropping the long form and the
+  brackets. In headings, captions and table cells (review items) keep the long form only if the
+  journal wants these to stand alone; say which you assumed. The abstract defines its own
+  acronyms and is exempt. Labels introduced in a bold-headed list (a constraint family, a
+  configuration or a table column: "- **Generalized Kraft (GK).** …") are labels, not acronyms:
+  the prose keeps the full name, and a table may reintroduce the label. A one-word full form
+  ("manifold (MAN)") is never flagged.
+- **Placeholders** (`placeholders`): list each with its location. Do not invent the missing
+  value or reference: say what is missing and leave it to the author.
+- **Software and resources cited at first mention** (`tools`): the script lists names that look
+  like software, databases or datasets (CamelCase, versioned or all-capital names, or a
+  sentence mentioning software, a package or a database) where no citation follows at the
+  first mention; `review_material.tool_mentions` has every candidate. Dismiss ordinary
+  acronyms, operating systems, solver parameter names and the paper's own labels in one line.
+  For the rest, propose moving the existing citation to the first mention, or say the tool is
+  never cited and needs a reference or a URL; never write the reference yourself.
+- **The same fact stated twice** (`repeats`): the script lists numbers (decimals,
+  percentages, integers of 100 or more) found in two or more paragraphs, with each sentence.
+  Dismiss coincidences and repeated settings that each sentence genuinely needs (a time limit
+  named where each experiment is described may stay once, then be referred to). Where two
+  sentences state the same fact, propose keeping it where it belongs (usually the results) and
+  cutting or referring back to it elsewhere. A conclusion that summarises the main result in
+  one sentence is not a repeat; a discussion that re-reports the results is. This differs from
+  the consistency read below, which checks that repeated facts agree.
 - **Untitled section or subsection**: propose a title that states the content. For an
   experiment subsection, the title states the conclusion ("The minimum-cut family carries most
   of the root bound"), not the topic.

@@ -75,12 +75,16 @@ rewrite. It also covers papers that cite author-year in plain text ("Smith and J
      new object. Flag undefined terms and private working labels, including the author's own
      coined names for results or objects ("a pinning result"): a coined name needs a few words
      saying what it means at first use ("a uniqueness result, which we call pinning"). Check
-     the terms in tables and captions too, not only in running prose.
+     the terms in tables and captions too, not only in running prose. **One concept, one term
+     across the whole paper**: list the near-synonyms used for each central object or task and
+     propose one; flag rather than fix where the words may name different things
+     (`scientific-style.md` §4).
 4. **Pass 3: plain, strong writing** (`references/plain-strong-writing.md`): short words,
    un-nominalised verbs ("perform an analysis of" → "analyse"), active voice where the agent is
    named, no padding. Apply the user's manuscript conventions in `scientific-style.md` §5: no
    imperative sentence openers except "Let…"/"Suppose…", inanimate subjects with active verbs
-   only when idiomatic, no reassurance about the authors' own checks. **Check the inanimate
+   only when idiomatic, no reassurance about the authors' own checks, **no sentence over about
+   40 words without a reason** (count them; propose a split at the natural joint, §5). **Check the inanimate
    subjects mechanically, sentence by sentence:** list every sentence whose subject is the
    paper, a section, a table, a figure, an experiment, a result or the data, and test its verb.
    "This paper asks / argues / believes / considers / wants", "the table argues", "the
@@ -223,7 +227,8 @@ After:
 - **Not every hedge is a fault.** Conditions, ranges, conjectures and limitations are content.
 - **Formal is not a tell.** Perfect grammar, long sentences and an academic register are
   normal in human scientific writing (`ai-tells.md` §7). The target is the cluster of tells,
-  not formality.
+  not formality. The 40-word limit in §5 is the author's readability convention, not a tell:
+  split for the reader, never to make the text "sound human".
 - **Do not churn.** Leave plain sentences alone; minimal faithful edits beat a wall-to-wall
   paraphrase. But fog (nominalisations, padding, dress-up words) is not "already plain".
 - **Do not inject personality**: no rhetorical questions, jokes or first-person warmth the

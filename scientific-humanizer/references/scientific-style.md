@@ -168,6 +168,17 @@ does not give. Abbreviations: define at first use, and drop any used fewer than 
 and "the limit" in successive sentences tells the reader there are three objects. Repeat the
 term.
 
+**One concept, one term, across the whole paper** (added 2026-11-19, from the user's review of a
+co-author's draft). The rule above is not only local: a paper that says "isolate" in the
+methods, "sample" in the results and "strain" in the discussion for the same object, or
+"resistance prediction", "phenotype prediction" and "AST prediction" for one task, makes the
+reader wonder whether these differ. In file mode, list the clusters of near-synonyms the paper
+uses for its central objects and tasks, with a count for each. Propose the term the paper
+defines (or, failing that, uses most) for every occurrence. **Flag, do not fix,** where the
+words may name genuinely different things in the field (a sample can hold several isolates;
+an isolate is not a strain): ask the author which is meant. Field-standard pairs that differ
+by definition stay distinct.
+
 ## 5. The user's manuscript conventions
 
 These come from the user's standing instructions for papers and apply whenever the text is a
@@ -218,6 +229,13 @@ manuscript:
   stated quantity, so flag it with the evidence (the code or the count it contradicts) rather
   than editing it silently.
 - **No foreshadowing** (§1) and **define every term before use** (§4).
+- **Sentences of more than about 40 words get split** (added 2026-11-19, from the user's review
+  of a co-author's draft). Long sentences are normal in scientific writing and are not an AI
+  tell; this is a readability limit. Count the words of every sentence (inline maths counts as
+  one word, a citation as none) and, for each over 40, propose a split at the natural joint (a
+  "which", a semicolon, an "and" between two clauses with their own subjects). Keep a long
+  sentence whole when splitting would separate a claim from its condition, or when it is a
+  list the reader scans; say so in one line. A run of long sentences matters more than one.
 - **Numbers**: tables do not wrap; a numerical inequality gets an argument, not a spot check.
   These are content: flag, do not fix.
 

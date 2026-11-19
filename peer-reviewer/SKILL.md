@@ -76,6 +76,23 @@ choice in the pseudocode specified. These errors are cheap to find and each one 
 reader's trust; they become minor points (or one bundled minor point if there are several
 small ones).
 
+Then a **reader pass** for three things a careful co-author would mark (added 2026-11-19, from
+the user's own comments on a co-author's draft). Each is usually a minor point; raise it as
+major only when it blocks reproduction or understanding of a main claim.
+- **Detail where it belongs.** Implementation detail that interrupts the argument in the main
+  text (command-line flags, file formats, hardware minutiae, step-by-step data cleaning)
+  belongs in the supplementary methods, with a one-line summary and a pointer left behind.
+  The reverse is a fault too: a choice the conclusions depend on must stay in the main text.
+- **Parameters: default or chosen.** For every tool or method run with parameters, the paper
+  says whether each is the default or was set, and for a set value, why (a citation, a tuning
+  procedure, a sensitivity check). "Run with default settings" is enough when true; a value
+  stated with no word on where it came from is not. The version of each tool belongs here too.
+- **A reader from the neighbouring field.** For an interdisciplinary venue, name the terms and
+  steps that a reader from the other side (a clinician reading the machine learning, a
+  computer scientist reading the microbiology) cannot follow, and propose a short gloss at
+  first use: a clause, not a tutorial. Judge the venue's readership first: in a specialist
+  journal the field's own terms need no gloss.
+
 ### 2. Place it in the literature (when novelty is in doubt)
 
 If the contribution's novelty or its relation to prior work is unclear, use the **LitReviewer**

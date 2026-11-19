@@ -582,6 +582,310 @@ def check_acronyms(ast):
     return found
 
 
+# ---------------------------------------------------------------------------------------
+# Text checks added 2026-11-19 from the author's own review comments on a co-author's draft:
+# leftover placeholders, the spelled-out form after an acronym is defined, software and data
+# resources cited at first mention, and the same number stated in two places.
+
+CITE_MARK, LINK_MARK, NOTE_MARK, CODE_MARK = "⟦CITE⟧", "⟦LINK⟧", "⟦NOTE⟧", "⟦CODE⟧"
+MATHS = re.compile(r"\$[^$]*\$")
+
+
+def marked(x):
+    """stringify, but a citation, a link or a footnote leaves a marker, so a sentence can be
+    asked whether it cites something."""
+    if isinstance(x, list):
+        return "".join(marked(i) for i in x)
+    if not isinstance(x, dict):
+        return ""
+    t, c = x.get("t"), x.get("c")
+    if t == "Cite":
+        return CITE_MARK
+    if t == "Note":
+        return NOTE_MARK
+    if t == "Code":  # parameter names, commands and file names are not prose to check
+        return CODE_MARK
+    if t == "Link":
+        return marked(c[1]) + LINK_MARK
+    if t == "RawInline":  # a LaTeX \cite or \url kept raw by the reader
+        return CITE_MARK if re.match(r"\\(?:cite|citep|citet|parencite|textcite|autocite|url|href|footnote)", c[1]) else ""
+    if t in ("Span", "Quoted", "Emph", "Strong", "Strikeout", "Superscript", "Subscript", "SmallCaps", "Underline"):
+        return marked(c[1] if t in ("Span", "Quoted") else c)
+    return stringify(x)
+
+
+def text_blocks(ast):
+    """Every paragraph-like block in document order, as (section, exempt, kind, inlines).
+    kind is 'para', 'heading', 'caption' or 'cell'; exempt is True for front matter (title
+    block, abstract, keywords) and back matter (funding, declarations, acknowledgements,
+    references), as in check_acronyms."""
+    out, state = [], {"sec": None, "exempt": True}
+
+    def rec(node, kind):
+        if isinstance(node, list):
+            for i in node:
+                rec(i, kind)
+            return
+        if not isinstance(node, dict):
+            return
+        t = node.get("t")
+        if t == "Header":
+            title = strip_numbering(header_title(node))
+            state["sec"] = title
+            state["exempt"] = front_matter(node, ast) or bool(BACK_MATTER.search(title))
+            out.append((state["sec"], state["exempt"], "heading", node["c"][2]))
+        elif t in ("Para", "Plain"):
+            out.append((state["sec"], state["exempt"], kind, node["c"]))
+        elif t == "Table":  # [attr, caption, colspecs, head, bodies, foot]
+            rec(node["c"][1], "caption")
+            rec(node["c"][3:], "cell")
+        elif t == "Figure":  # [attr, caption, blocks]
+            rec(node["c"][1], "caption")
+            rec(node["c"][2], kind)
+        elif t in ("CodeBlock", "RawBlock", "Math"):
+            return
+        else:
+            rec(node.get("c"), kind)
+    rec(ast["blocks"], "para")
+    return out
+
+
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z⟦(\"'])")
+
+
+def sentences(text):
+    return [s for s in SENTENCE_SPLIT.split(text) if s.strip()]
+
+
+PLACEHOLDER = re.compile(
+    r"\[\s*(?:refs?|cite|citations?(?: needed)?|\?+|tb[cd]|todo|x{2,}|n+|\.\.\.|…)\s*\]"   # [REF] [?] [TBD] [XX] [N]
+    r"|\b(?:TODO|TBD|TBC|FIXME|XXX+|PLACEHOLDER)\b"
+    r"|\?{2,}"                                                                              # ?? from a missing ref
+    r"|\b[Xx]{2,}(?:\.[Xx]+)?\s*%"                                                          # XX% / xx.x%
+    r"|\b(?:Figure|Fig\.|Table|Section|Supplementary (?:Table|Figure))\s*(?:\?|X(?![\w]))"    # Figure ? / Table X
+    r"|\blorem ipsum\b", re.I)
+
+
+def check_placeholders(ast, layout):
+    """Text left for later and never filled in: [REF], [?], TODO, XX%, 'Figure ?', ??.
+    Searched in the whole draft, front and back matter included, since a placeholder anywhere
+    is an error. The compiled PDF is searched too, for '??' from an unresolved reference."""
+    found, seen = [], set()
+    for sec, _exempt, kind, inl in text_blocks(ast):
+        text = MATHS.sub(" ", marked(inl))  # [n] = {1..n} and ?? in maths are notation
+        for m in PLACEHOLDER.finditer(text):
+            tok = m.group(0).strip()
+            key = (tok, text[:60])
+            if key in seen:
+                continue
+            seen.add(key)
+            ctx = text[max(0, m.start() - 60):m.end() + 40].replace(CITE_MARK, "[cite]").replace(LINK_MARK, "").replace(NOTE_MARK, "")
+            found.append(issue("placeholders", "review",
+                               f"Placeholder '{tok}' left in the text ({kind}): fill it in or remove it. "
+                               f"Context: \"…{ctx.strip()}…\"", find=tok, section=sec))
+    for i, p in enumerate(layout.doc):
+        for m in re.finditer(r"\?\?+", p.get_text()):
+            if not any(x["find"] == m.group(0) for x in found):
+                found.append(issue("placeholders", "review", "'??' printed in the PDF: an unresolved cross-reference "
+                                   "or citation, or a placeholder.", page=i + 1, find=m.group(0)))
+                break
+    return found
+
+
+STOP = {"of", "the", "and", "for", "in", "on", "to", "a", "an", "by", "with", "from", "at"}
+
+
+def long_form(short, before):
+    """Schwartz-Hearst: the shortest run of words ending just before '(SHORT)' whose letters
+    contain SHORT's characters in order, the first one starting a word. None if there is none."""
+    words = before.split()
+    window = words[-min(len(short) + 5, 2 * len(short)):]
+    cand = " ".join(window)
+    s, l = len(short) - 1, len(cand) - 1
+    while s >= 0:
+        c = short[s].lower()
+        if not c.isalnum():
+            s -= 1
+            continue
+        while l >= 0 and (cand[l].lower() != c or (s == 0 and l > 0 and cand[l - 1].isalnum())):
+            l -= 1
+        if l < 0:
+            return None
+        l -= 1
+        s -= 1
+    lf = cand[cand.rfind(" ", 0, l + 1) + 1:].strip(" ,;:")
+    lf = re.sub(r"^(?:the|a|an)\s+", "", lf, flags=re.I)
+    # A one-word long form ("manifold (MAN)", "crossing (CR)") is a label for a family or a
+    # table column, and the plain word stays the right word in prose: only phrases count.
+    return lf if len(lf) > len(short) and len(lf.split()) >= 2 else None
+
+
+def list_labels(ast):
+    """Labels introduced at the head of a list item in bold ("- **Generalized Kraft (GK).** The cut
+    rows ..."): names for a family of constraints, a configuration or a table column, not
+    acronyms for the prose. The prose keeps the full name, and the label may be reintroduced
+    where a table uses it (his ruling, 2026-11-19, on the BME paper's GK, ST, CO, ME and DC)."""
+    labels = set()
+
+    def visit(node):
+        if node.get("t") not in ("BulletList", "OrderedList"):
+            return
+        items = node["c"] if node["t"] == "BulletList" else node["c"][1]
+        for item in items:
+            if not item or item[0].get("t") not in ("Para", "Plain") or not item[0]["c"]:
+                continue
+            head = item[0]["c"][0]
+            if head.get("t") == "Strong":  # an item of a bold-headed list: every "(X)" in it is a label
+                labels.update(re.findall(r"\(([A-Za-z0-9-]+)\)", stringify(item[0]["c"])))
+    walk(ast["blocks"], visit)
+    return labels
+
+
+def check_acronym_long_forms(ast):
+    """Once an acronym is defined in the main text, the text uses the acronym: the spelled-out
+    form should not reappear, and the acronym should not be defined a second time. Headings and
+    captions are review items, since some journals want them to stand alone."""
+    found, defs = [], {}  # acronym -> (long form, block index)
+    blocks = text_blocks(ast)
+    labels = list_labels(ast)
+    for bi, (sec, exempt, kind, inl) in enumerate(blocks):
+        if exempt:
+            continue
+        text = re.sub(r"\$[^$]*\$", " ", marked(inl))
+        for m in re.finditer(r"\(([A-Z][A-Za-z0-9-]*[A-Z][A-Za-z0-9-]*?)(s)?\)", text):
+            a = m.group(1)
+            if a in ACRONYM_ALLOW or a in labels:
+                continue
+            lf = long_form(a, text[:m.start()].replace(CITE_MARK, " ").replace(LINK_MARK, " "))
+            if lf is None:
+                continue
+            if a in defs:
+                found.append(issue("acronyms", "propose", f"'{a}' is defined again (first defined as '{defs[a][0]}' in "
+                                   f"{blocks[defs[a][1]][0] or 'the opening text'}): drop '{lf} (' … ')' here and write '{a}'.",
+                                   find=f"({a}", section=sec))
+            else:
+                defs[a] = (lf, bi)
+    for a, (lf, at) in defs.items():
+        pat = re.compile(r"(?<![\w-])" + r"\s+".join(re.escape(w) for w in lf.split()) + r"(?:s|es)?(?![\w-])(?!\s*\(" + re.escape(a) + ")", re.I)
+        for sec, exempt, kind, inl in blocks[at + 1:]:
+            if exempt:
+                continue
+            text = marked(inl)
+            for m in pat.finditer(text):
+                ctx = text[max(0, m.start() - 50):m.end() + 40].replace(CITE_MARK, "[cite]").replace(LINK_MARK, "").replace(NOTE_MARK, "")
+                sev = "review" if kind in ("heading", "caption", "cell") else "propose"
+                why = f" (a {kind}: keep it spelled out only if the journal wants {kind}s to stand alone)" if sev == "review" else ""
+                found.append(issue("acronyms", sev, f"'{m.group(0)}' after '{a}' was defined: write '{a}'{why}. "
+                                   f"Context: \"…{ctx.strip()}…\"", find=m.group(0), section=sec))
+    return found
+
+
+TOOL_NAME = re.compile(
+    r"(?<![\w@/.-])("
+    r"(?!Mc|Mac)[A-Za-z]*[a-z][A-Z][A-Za-z0-9]*\+*"        # CamelCase: ResFinder, FastME, PyMuPDF, iTOL
+    r"|[A-Za-z]{3,}[a-z]\d+[A-Za-z0-9]*"                   # name with a digit: Bowtie2, minimap2
+    r"|[A-Z][A-Za-z]+(?=\s+(?:v|version\s*)\d)"            # a name followed by a version
+    r"|[A-Z]{3,}\+?"                                       # all capitals: BLAST, CPLEX, CARD
+    r")(?![\w])")
+NEAR_CITE_CHARS = 120  # how far after a name its citation may sit (a clause, not a sentence)
+TOOL_CONTEXT = re.compile(r"\b(software|package|library|tool|pipeline|database|server|solver|program|algorithm|"
+                          r"implementation|version|v\d|R package|Python|web ?server|repository|toolkit|platform)\b", re.I)
+
+
+def tool_mentions(ast):
+    """Software, databases and other named resources, with whether the sentence of their first
+    main-text mention cites anything. Candidates only: the agent dismisses ordinary words,
+    defined acronyms and people's or places' names."""
+    defined = set()
+    for _sec, exempt, _k, inl in text_blocks(ast):
+        if not exempt:
+            defined.update(re.findall(r"\(([A-Z][A-Za-z0-9-]*[A-Z][A-Za-z0-9-]*?)s?\)", marked(inl)))
+    first, cited_ever = {}, set()
+    for sec, exempt, kind, inl in text_blocks(ast):
+        if exempt or kind in ("heading", "cell"):
+            continue
+        for s in sentences(marked(inl)):
+            plain = re.sub(r"\$[^$]*\$", " ", s)
+            marks = [m.start() for m in re.finditer("|".join((CITE_MARK, LINK_MARK, NOTE_MARK)), plain)]
+            names = [m for m in TOOL_NAME.finditer(plain)]
+            for j, m in enumerate(names):
+                name = m.group(1)
+                if name in ("CITE", "LINK", "NOTE", "CODE") or PLACEHOLDER.fullmatch(name):  # our markers; placeholders
+                    continue
+                # Cited = a citation follows this name before the next candidate name, within
+                # NEAR_CITE_CHARS; a citation at the end of a sentence belongs to the last name only.
+                nxt = names[j + 1].start() if j + 1 < len(names) else len(plain)
+                has_cite = any(m.end() <= c < min(nxt, m.end() + NEAR_CITE_CHARS) for c in marks)
+                if name in ACRONYM_ALLOW or name in defined or name.rstrip("+") in defined:
+                    continue
+                if has_cite:
+                    cited_ever.add(name)
+                if name not in first:
+                    first[name] = {"name": name, "section": sec, "cited_at_first_mention": has_cite,
+                                   "tool_context": bool(TOOL_CONTEXT.search(plain)),
+                                   "sentence": plain.replace(CITE_MARK, "[cite]").replace(LINK_MARK, "").replace(NOTE_MARK, "")[:240]}
+    out = []
+    for name, d in first.items():
+        d["cited_somewhere"] = name in cited_ever
+        out.append(d)
+    return out
+
+
+def check_tools_cited(mentions):
+    """Each named software or data resource is cited at its first mention. Only candidates that
+    look like resources (a tool-ish word in the sentence, or a CamelCase/versioned name) and
+    are not cited there become findings; the full list is in review_material.tool_mentions."""
+    found = []
+    for d in mentions:
+        if d["cited_at_first_mention"]:
+            continue
+        shape = bool(re.search(r"[a-z][A-Z]|[a-z]\d", d["name"]))
+        if not (d["tool_context"] or shape):
+            continue
+        later = " It is cited later: move the citation to here." if d["cited_somewhere"] else " It is never cited."
+        found.append(issue("tools", "review", f"'{d['name']}' looks like a named software or data resource, and no "
+                           f"citation follows it at its first mention.{later} Dismiss if it is not a resource. "
+                           f"Sentence: \"{d['sentence'][:160]}\"", find=d["name"], section=d["section"]))
+    return found
+
+
+NUMBER = re.compile(r"(?<![\w.^_$(])(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+|\d{2,})(\s*%|\s*per\s*cent)?(?![\w)]|\.\d)")
+REPEAT_MIN_INT = 100  # integers below this repeat by coincidence too often; decimals and percentages always count
+
+
+def repeated_numbers(ast):
+    """Numbers (two or more digits, a decimal, or a percentage; years and identifiers excluded)
+    that appear in sentences of two or more different main-text paragraphs. The same fact
+    stated twice is redundant, and two statements can drift apart; the agent judges which
+    repeats are deliberate (an abstract-style summary in the conclusion) and which to cut."""
+    where = defaultdict(list)
+    for bi, (sec, exempt, kind, inl) in enumerate(text_blocks(ast)):
+        if exempt or kind != "para":
+            continue
+        for s in sentences(marked(inl)):
+            plain = MATHS.sub(" ", IDENTIFIER.sub(" ", s.replace(CITE_MARK, " ").replace(LINK_MARK, " ")
+                                                 .replace(NOTE_MARK, " ").replace(CODE_MARK, " ")))
+            plain = HARD_REF.sub(" ", plain)
+            for m in NUMBER.finditer(plain):
+                v = m.group(1).replace(",", "")
+                if re.fullmatch(r"1[5-9]\d\d|20\d\d", v) or (v.isdigit() and int(v) < REPEAT_MIN_INT and not m.group(2)):
+                    continue
+                key = v + ("%" if m.group(2) else "")
+                if not where[key] or where[key][-1]["block"] != bi:
+                    where[key].append({"block": bi, "section": sec, "sentence": plain.strip()[:220], "find": m.group(1)})
+    return [{"number": k, "places": v} for k, v in where.items() if len(v) > 1]
+
+
+def check_repeated_facts(reps, cap=15):
+    found = []
+    for r in sorted(reps, key=lambda r: -len(r["places"]))[:cap]:
+        secs = "; ".join(f"{p['section']}: \"{p['sentence'][:100]}\"" for p in r["places"][:4])
+        found.append(issue("repeats", "review", f"{r['number']} appears in {len(r['places'])} paragraphs ({secs}). If these state "
+                           "the same fact, keep it in the one place it belongs and refer to it elsewhere; if they "
+                           "are different facts, ignore.", find=r["places"][1]["find"], section=r["places"][1]["section"]))
+    return found
+
+
 def structure_notes(ast):
     """Formatter-owned structure conventions, for the agent to judge."""
     heads = [(b["c"][0], header_title(b)) for b in ast["blocks"] if b["t"] == "Header"]
@@ -1296,6 +1600,12 @@ def cmd_check(args):
     issues += check_hardcoded_refs(ast)
     issues += check_unicode_maths(ast)
     issues += check_acronyms(ast)
+    issues += check_acronym_long_forms(ast)
+    issues += check_placeholders(ast, layout)
+    tools = tool_mentions(ast)
+    issues += check_tools_cited(tools)
+    reps = repeated_numbers(ast)
+    issues += check_repeated_facts(reps)
     notes, headings = structure_notes(ast)
     issues += notes
     issues += check_paragraphs(layout, args.max_lines, args.hard_max_lines, args.min_trim_lines)
@@ -1311,7 +1621,8 @@ def cmd_check(args):
     issues += check_consistency(ast, layout)
     issues += check_log(layout, log, tex_text)
     extras = {"section_openings_and_closings": section_ends(ast), "maths_inventory": maths_inventory(ast),
-              "headings": headings, "pages": len(layout.doc), "build": paper.build_note}
+              "headings": headings, "pages": len(layout.doc), "build": paper.build_note,
+              "tool_mentions": tools, "repeated_numbers": reps}
     place(layout.doc, issues)
     (paper.out / "issues.json").write_text(json.dumps({"issues": issues, "review_material": extras}, indent=1, ensure_ascii=False))
     write_report(paper, issues, extras, paper.out / "report.md")
